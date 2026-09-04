@@ -1,0 +1,4 @@
+interface:
+  display_name: "CO₂ Accounting"
+  short_description: "Validate PV and storage CO₂ accounting"
+  default_prompt: "Use $co2-accounting to review this PV energy-flow calculation for conservation, attribution, and double counting."
