@@ -4,17 +4,24 @@
       "already_configured": "A CO2 Saver plant already uses this grid import and grid export source pair."
     },
     "error": {
+      "battery_confirmation_required": "Confirm that the battery charge and discharge sources have the correct directions and meet the shared synchronized measurement contract.",
+      "capacity_out_of_range": "Enter a usable output capacity from 0.1 through 1000 kWh.",
       "confirmation_required": "Confirm that all selected sources meet the synchronized physical measurement contract.",
       "duplicate_source": "Each measurement role must use a different source entity.",
+      "efficiency_out_of_range": "Enter an AC round-trip efficiency greater than 0 and no more than 100%.",
       "future_last_reported": "Home Assistant reports this source publication time in the future.",
       "future_period_end": "The physical measurement period end is in the future.",
+      "invalid_battery_choice": "Choose explicitly whether this plant has a battery storage system.",
+      "invalid_battery_identity": "Choose whether this is the same physical battery or a replacement battery.",
+      "invalid_decimal_separator": "Use a dot (.) as the decimal separator; a comma is not accepted.",
       "invalid_device_class": "The selected source must have device class energy.",
       "invalid_domain": "The selected source must be a sensor entity.",
       "invalid_last_reported": "Home Assistant does not provide a valid publication time (last_reported) for this source.",
+      "invalid_number": "Enter a plain decimal number without whitespace or exponent notation.",
       "invalid_period_end": "The selected source must expose a valid UTC timestamp in the co2saver_period_end state attribute.",
       "invalid_selection": "Select a valid source entity.",
       "invalid_source": "The selected source does not meet the cumulative energy source contract.",
-      "invalid_source_vector": "The current source values do not form a complete, valid synchronized measurement.",
+      "invalid_source_vector": "The selected energy sources do not form a complete, valid synchronized measurement. Correct their states and try again. To change a source selected in an earlier step, cancel this draft and restart configuration.",
       "invalid_state_class": "The selected source must have state class total or total_increasing.",
       "invalid_topology": "Select one of the supported measurement topologies.",
       "invalid_unit": "The selected source must use Wh, kWh, or MWh.",
@@ -22,17 +29,22 @@
       "period_after_publication": "The physical measurement period end cannot be later than the Home Assistant publication time.",
       "publication_delay": "The source was published more than 60 seconds after its physical measurement period ended.",
       "publication_skew": "The selected roles were published more than 60 seconds apart.",
-      "required": "This source is required for the selected topology.",
-      "setup_incomplete": "Setup cannot be completed yet. Battery storage configuration is the next development step in issue #6; no configuration has been saved.",
+      "required": "This field is required.",
+      "setup_incomplete": "Setup cannot be completed yet. Consumer configuration is the next development step in issue #7; no configuration has been saved.",
       "source_disabled": "The selected source is disabled in the entity registry.",
       "source_missing": "The selected source has no current Home Assistant state.",
       "source_not_registered": "The selected source must have an entity registry entry.",
       "source_stale": "The source's physical measurement is more than five minutes old.",
       "source_unavailable": "The selected source is currently unavailable or unknown.",
       "sources_not_synchronized": "All selected sources must expose exactly the same physical period end in co2saver_period_end.",
-      "unexpected_field": "This source field is not allowed for the selected topology."
+      "unexpected_field": "This field is not allowed in the current configuration step."
     },
     "step": {
+      "consumers": {
+        "data": {},
+        "description": "The measurement and battery-storage draft is valid. Consumer configuration is the next development step in issue #7. Setup cannot yet be completed. It creates no Config Entry, Store, battery-origin ledger, listener, polling runner, or accounting booking.",
+        "title": "Configure consumers"
+      },
       "reconfigure": {
         "data": {
           "topology": "Measurement topology"
@@ -62,9 +74,34 @@
         "title": "Select cumulative energy sources"
       },
       "storage": {
-        "data": {},
-        "description": "The measurement-source draft is valid. Battery storage configuration is the next development step in issue #6. Setup cannot yet be completed, and no Config Entry, Store, listener, polling runner, or accounting booking is created.",
-        "title": "Battery storage"
+        "data": {
+          "battery_present": "Battery storage"
+        },
+        "data_description": {
+          "battery_present": "Choose explicitly whether this plant has a battery storage system. New setup has no default; reconfiguration only suggests the existing choice."
+        },
+        "description": "Specify whether the plant has a battery storage system. This choice only extends the staged configuration draft; it does not create or change a Config Entry, Store, battery-origin ledger, listener, polling runner, or accounting result.",
+        "title": "Choose battery storage"
+      },
+      "storage_sources": {
+        "data": {
+          "battery_charge": "Battery charge",
+          "battery_discharge": "Battery discharge",
+          "battery_identity": "Physical battery",
+          "battery_sources_confirmed": "I confirm the battery source directions and synchronized measurement contract",
+          "round_trip_efficiency_percent": "AC round-trip efficiency",
+          "usable_capacity_kwh": "Usable output capacity"
+        },
+        "data_description": {
+          "battery_charge": "Direction-separated cumulative energy measured at the battery's AC input while charging.",
+          "battery_discharge": "Direction-separated cumulative energy measured at the battery's AC output while discharging.",
+          "battery_identity": "Required when reconfiguring an existing battery; no option is preselected. Choose replacement even if the meter entities stayed the same, because CO2 Saver cannot infer a physical replacement behind unchanged meters. Choosing the same battery keeps its internal identity; choosing replacement creates one new draft identity. The choice is not stored as a lasting flag. When the complete flow commits an effective change in issue #8, it starts a prospective segment, conservatively quarantines prior battery inventory, and never recalculates history.",
+          "battery_sources_confirmed": "Confirm that charge and discharge use the correct separate directions and come from the same atomic physical reading as every selected PV and grid role, with exactly the same co2saver_period_end.",
+          "round_trip_efficiency_percent": "Enter a plain decimal greater than 0 and no more than 100. The suggested 90% must still be visibly confirmed.",
+          "usable_capacity_kwh": "Enter the usable energy available at the battery's AC output from 0.1 through 1000 kWh. There is no default."
+        },
+        "description": "Select separate cumulative AC energy sensors for battery charge and discharge. They must be registered and enabled and meet the same sensor, energy device class, total or total_increasing state class, and Wh/kWh/MWh requirements as the PV and grid sources. Every energy role must come from the same atomic physical reading, expose exactly the same authoritative UTC timestamp in co2saver_period_end, and be measured at least every five minutes. Publication must occur within 60 seconds of the period end and within 60 seconds across roles. Enter capacity and efficiency as plain decimal text with a dot; commas, exponent notation, and surrounding whitespace are rejected.",
+        "title": "Configure battery storage"
       },
       "user": {
         "data": {
@@ -79,6 +116,18 @@
     }
   },
   "selector": {
+    "battery_identity": {
+      "options": {
+        "physical_battery_replaced": "Physical battery replaced",
+        "same_physical_battery": "Same physical battery"
+      }
+    },
+    "battery_present": {
+      "options": {
+        "with_battery": "With battery storage",
+        "without_battery": "Without battery storage"
+      }
+    },
     "topology": {
       "options": {
         "inverter": "Inverter (PV generation measured)",

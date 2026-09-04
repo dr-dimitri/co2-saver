@@ -6,7 +6,9 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from decimal import Decimal
 from typing import TYPE_CHECKING, Any
+from uuid import uuid4
 
 import voluptuous as vol
 from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
@@ -14,9 +16,13 @@ from homeassistant.core import valid_entity_id
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.selector import (
     BooleanSelector,
+    EntitySelector,
     SelectSelector,
     SelectSelectorConfig,
     SelectSelectorMode,
+    TextSelector,
+    TextSelectorConfig,
+    TextSelectorType,
 )
 
 from .config_sources import (
@@ -24,12 +30,16 @@ from .config_sources import (
     source_fields,
     validate_source_selection,
 )
+from .config_storage import validate_storage_selection
 from .const import DOMAIN
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
 _TOPOLOGIES = ("inverter", "smart_meter")
+_BATTERY_ROLES = ("battery_charge", "battery_discharge")
+_BATTERY_IDENTITIES = ("same_physical_battery", "physical_battery_replaced")
+_BATTERY_CHOICES = ("without_battery", "with_battery")
 
 
 class Co2SaverConfigFlow(ConfigFlow, domain=DOMAIN):
@@ -40,11 +50,21 @@ class Co2SaverConfigFlow(ConfigFlow, domain=DOMAIN):
     def __init__(self) -> None:
         """Keep all incomplete configuration private to this flow."""
         self._draft: dict[str, Any] = {}
+        self._original_battery: dict[str, Any] | None = None
+        self._new_battery_id: str | None = None
 
     @property
     def configuration_draft(self) -> dict[str, Any]:
         """Return a detached, serializable snapshot of the staged configuration."""
         return deepcopy(self._draft)
+
+    @property
+    def battery_change_pending(self) -> bool:
+        """Report a staged difference, never an authoritative persisted flag."""
+        return (
+            "battery" in self._draft
+            and self._draft["battery"] != self._original_battery
+        )
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -58,6 +78,7 @@ class Co2SaverConfigFlow(ConfigFlow, domain=DOMAIN):
         """Stage source changes while retaining the original entry and locator."""
         if not self._draft:
             self._draft = deepcopy(dict(self._get_reconfigure_entry().data))
+            self._original_battery = deepcopy(self._draft.get("battery"))
         return await self._async_topology_step("reconfigure", user_input)
 
     async def _async_topology_step(
@@ -107,22 +128,8 @@ class Co2SaverConfigFlow(ConfigFlow, domain=DOMAIN):
         suggestions = dict(
             user_input if user_input is not None else self._source_suggestions(topology)
         )
-        registry = er.async_get(self.hass)
-        for role in source_fields(topology):
-            value = suggestions.get(role)
-            if isinstance(value, str) and (entry := registry.async_get(value)):
-                suggestions[role] = entry.entity_id
-        selector = energy_entity_selector(self.hass)
-        # Keep the submitted selection retryable if its semantics changed after
-        # the first form. The backend still validates every role on every submit.
-        selected_entities = {
-            value
-            for role in source_fields(topology)
-            if isinstance(value := suggestions.get(role), str)
-            and valid_entity_id(value)
-        }
-        selector.config["include_entities"] = sorted(
-            set(selector.config.get("include_entities", ())) | selected_entities
+        selector = self._energy_selector_with_suggestions(
+            source_fields(topology), suggestions
         )
         fields: dict[vol.Marker, object] = {
             (
@@ -142,6 +149,29 @@ class Co2SaverConfigFlow(ConfigFlow, domain=DOMAIN):
             last_step=False,
         )
 
+    def _energy_selector_with_suggestions(
+        self, roles: tuple[str, ...], suggestions: dict[str, Any]
+    ) -> EntitySelector:
+        """Keep corrected sources retryable for both source-selection steps."""
+        registry = er.async_get(self.hass)
+        for role in roles:
+            value = suggestions.get(role)
+            if isinstance(value, str) and (entry := registry.async_get(value)):
+                suggestions[role] = entry.entity_id
+        selector = energy_entity_selector(self.hass)
+        # Keep the submitted selection retryable if its semantics changed after
+        # the first form. The backend still validates every role on every submit.
+        selected_entities = {
+            value
+            for role in roles
+            if isinstance(value := suggestions.get(role), str)
+            and valid_entity_id(value)
+        }
+        selector.config["include_entities"] = sorted(
+            set(selector.config.get("include_entities", ())) | selected_entities
+        )
+        return selector
+
     def _source_suggestions(self, topology: str) -> dict[str, object]:
         """Resolve old registry identities to current UI names, never persist them."""
         registry = er.async_get(self.hass)
@@ -160,9 +190,140 @@ class Co2SaverConfigFlow(ConfigFlow, domain=DOMAIN):
     async def async_step_storage(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Expose the next flow boundary; issue #6 supplies its configuration."""
+        """Choose whether this plant has a battery, without silently assuming one."""
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            present = user_input.get("battery_present")
+            if present not in _BATTERY_CHOICES:
+                errors["battery_present"] = "invalid_battery_choice"
+            elif present == "with_battery":
+                return await self.async_step_storage_sources()
+            else:
+                self._draft["battery"] = None
+                return await self.async_step_consumers()
+        suggestions = (
+            {
+                "battery_present": (
+                    "with_battery"
+                    if self._draft["battery"] is not None
+                    else "without_battery"
+                )
+            }
+            if "battery" in self._draft
+            else {}
+        )
         return self.async_show_form(
             step_id="storage",
+            data_schema=self.add_suggested_values_to_schema(
+                vol.Schema(
+                    {
+                        vol.Required("battery_present"): SelectSelector(
+                            SelectSelectorConfig(
+                                options=list(_BATTERY_CHOICES),
+                                translation_key="battery_present",
+                                mode=SelectSelectorMode.LIST,
+                            )
+                        )
+                    }
+                ),
+                suggestions,
+            ),
+            errors=errors,
+            last_step=False,
+        )
+
+    async def async_step_storage_sources(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Validate battery roles and exact parameters against the complete vector."""
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            values = dict(user_input)
+            if values.pop("battery_sources_confirmed", None) is not True:
+                errors["battery_sources_confirmed"] = "battery_confirmation_required"
+            identity = values.pop("battery_identity", None)
+            if (
+                self._original_battery is not None
+                and identity not in _BATTERY_IDENTITIES
+            ):
+                errors["battery_identity"] = "invalid_battery_identity"
+            if self._original_battery is None and identity is not None:
+                errors["base"] = "invalid_battery_identity"
+            parameters, source_errors = validate_storage_selection(
+                self.hass, self._draft["sources"], values
+            )
+            errors.update(source_errors)
+            if parameters is not None and not errors:
+                if (
+                    self._original_battery is not None
+                    and identity == "same_physical_battery"
+                ):
+                    battery_id = self._original_battery["battery_id"]
+                else:
+                    if self._new_battery_id is None:
+                        self._new_battery_id = uuid4().hex
+                    battery_id = self._new_battery_id
+                self._draft["battery"] = {"battery_id": battery_id, **parameters}
+                return await self.async_step_consumers()
+
+        suggestions = (
+            dict(user_input) if user_input is not None else self._storage_suggestions()
+        )
+        selector = self._energy_selector_with_suggestions(_BATTERY_ROLES, suggestions)
+        fields: dict[vol.Marker, object] = {
+            vol.Required(role): selector for role in _BATTERY_ROLES
+        }
+        fields.update(
+            {
+                vol.Required("usable_capacity_kwh"): TextSelector(
+                    TextSelectorConfig(type=TextSelectorType.TEXT, suffix="kWh")
+                ),
+                vol.Required("round_trip_efficiency_percent"): TextSelector(
+                    TextSelectorConfig(type=TextSelectorType.TEXT, suffix="%")
+                ),
+                vol.Required(
+                    "battery_sources_confirmed", default=False
+                ): BooleanSelector(),
+            }
+        )
+        if self._original_battery is not None:
+            fields[vol.Required("battery_identity")] = SelectSelector(
+                SelectSelectorConfig(
+                    options=list(_BATTERY_IDENTITIES),
+                    translation_key="battery_identity",
+                    mode=SelectSelectorMode.LIST,
+                )
+            )
+        return self.async_show_form(
+            step_id="storage_sources",
+            data_schema=self.add_suggested_values_to_schema(
+                vol.Schema(fields), suggestions
+            ),
+            errors=errors,
+            last_step=False,
+        )
+
+    def _storage_suggestions(self) -> dict[str, Any]:
+        """Suggest exact prior values but require fresh direction/identity consent."""
+        battery = self._draft.get("battery")
+        if battery is None:
+            return {"round_trip_efficiency_percent": "90"}
+        # Appending an exponent shifts an exact decimal string without applying
+        # the Decimal context's precision or binary floating-point rounding.
+        percent = format(Decimal(battery["round_trip_efficiency"] + "e2"), "f")
+        return {
+            "battery_charge": battery["charge_source"],
+            "battery_discharge": battery["discharge_source"],
+            "usable_capacity_kwh": battery["usable_capacity_kwh"],
+            "round_trip_efficiency_percent": percent,
+        }
+
+    async def async_step_consumers(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Expose the next boundary; issue #7 supplies the consumer configuration."""
+        return self.async_show_form(
+            step_id="consumers",
             data_schema=vol.Schema({}),
             errors={"base": "setup_incomplete"} if user_input is not None else {},
             last_step=False,

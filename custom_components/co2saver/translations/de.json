@@ -4,17 +4,24 @@
       "already_configured": "Eine CO2-Saver-Anlage verwendet dieses Paar aus Netzbezugs- und Netzeinspeisungsquelle bereits."
     },
     "error": {
+      "battery_confirmation_required": "Bestätige die korrekten Richtungen der Lade- und Entladequellen sowie den gemeinsamen Synchronitätsvertrag.",
+      "capacity_out_of_range": "Gib eine nutzbare Ausgangskapazität von 0.1 bis 1000 kWh ein.",
       "confirmation_required": "Bestätige, dass alle ausgewählten Quellen den Vertrag für synchronisierte physische Messungen erfüllen.",
       "duplicate_source": "Jede Messrolle muss eine andere Quell-Entity verwenden.",
+      "efficiency_out_of_range": "Gib einen AC-Rundtrip-Wirkungsgrad von mehr als 0 bis höchstens 100 % ein.",
       "future_last_reported": "Home Assistant meldet für diese Quelle einen Veröffentlichungszeitpunkt in der Zukunft.",
       "future_period_end": "Das Ende der physischen Messperiode liegt in der Zukunft.",
+      "invalid_battery_choice": "Wähle ausdrücklich aus, ob diese Anlage einen Stromspeicher besitzt.",
+      "invalid_battery_identity": "Wähle aus, ob dies derselbe physische Speicher oder ein Ersatzspeicher ist.",
+      "invalid_decimal_separator": "Verwende einen Punkt (.) als Dezimaltrennzeichen; ein Komma wird nicht akzeptiert.",
       "invalid_device_class": "Die ausgewählte Quelle muss die Geräteklasse energy besitzen.",
       "invalid_domain": "Die ausgewählte Quelle muss eine sensor-Entity sein.",
       "invalid_last_reported": "Home Assistant stellt für diese Quelle keinen gültigen Veröffentlichungszeitpunkt (last_reported) bereit.",
+      "invalid_number": "Gib eine einfache Dezimalzahl ohne Leerzeichen oder Exponentialschreibweise ein.",
       "invalid_period_end": "Die ausgewählte Quelle muss im State-Attribut co2saver_period_end einen gültigen UTC-Zeitstempel bereitstellen.",
       "invalid_selection": "Wähle eine gültige Quell-Entity aus.",
       "invalid_source": "Die ausgewählte Quelle erfüllt den Vertrag für kumulative Energiequellen nicht.",
-      "invalid_source_vector": "Die aktuellen Quellwerte bilden keine vollständige, gültige und synchronisierte Messung.",
+      "invalid_source_vector": "Die ausgewählten Energiequellen bilden keine vollständige, gültige und synchronisierte Messung. Korrigiere ihre Zustände und versuche es erneut. Um eine in einem früheren Schritt ausgewählte Quelle zu ändern, brich diesen Entwurf ab und starte die Konfiguration neu.",
       "invalid_state_class": "Die ausgewählte Quelle muss die Zustandsklasse total oder total_increasing besitzen.",
       "invalid_topology": "Wähle eine der unterstützten Messtopologien aus.",
       "invalid_unit": "Die ausgewählte Quelle muss Wh, kWh oder MWh verwenden.",
@@ -22,17 +29,22 @@
       "period_after_publication": "Das Ende der physischen Messperiode darf nicht nach dem Home-Assistant-Veröffentlichungszeitpunkt liegen.",
       "publication_delay": "Die Quelle wurde mehr als 60 Sekunden nach Ende ihrer physischen Messperiode veröffentlicht.",
       "publication_skew": "Die ausgewählten Rollen wurden mit mehr als 60 Sekunden Abstand veröffentlicht.",
-      "required": "Diese Quelle ist für die ausgewählte Topologie erforderlich.",
-      "setup_incomplete": "Die Einrichtung kann noch nicht abgeschlossen werden. Die Speicherkonfiguration ist der nächste Entwicklungsschritt in Issue #6; es wurde keine Konfiguration gespeichert.",
+      "required": "Dieses Feld ist erforderlich.",
+      "setup_incomplete": "Die Einrichtung kann noch nicht abgeschlossen werden. Die Verbraucherkonfiguration ist der nächste Entwicklungsschritt in Issue #7; es wurde keine Konfiguration gespeichert.",
       "source_disabled": "Die ausgewählte Quelle ist in der Entity Registry deaktiviert.",
       "source_missing": "Die ausgewählte Quelle hat keinen aktuellen Home-Assistant-Zustand.",
       "source_not_registered": "Die ausgewählte Quelle benötigt einen Eintrag in der Entity Registry.",
       "source_stale": "Die physische Messung der Quelle ist älter als fünf Minuten.",
       "source_unavailable": "Die ausgewählte Quelle ist derzeit nicht verfügbar oder unbekannt.",
       "sources_not_synchronized": "Alle ausgewählten Quellen müssen in co2saver_period_end exakt dasselbe Ende der physischen Messperiode ausweisen.",
-      "unexpected_field": "Dieses Quellenfeld ist für die ausgewählte Topologie nicht zulässig."
+      "unexpected_field": "Dieses Feld ist im aktuellen Konfigurationsschritt nicht zulässig."
     },
     "step": {
+      "consumers": {
+        "data": {},
+        "description": "Der Entwurf für Messung und Stromspeicher ist gültig. Die Verbraucherkonfiguration ist der nächste Entwicklungsschritt in Issue #7. Die Einrichtung kann noch nicht abgeschlossen werden. Sie erzeugt keinen Config Entry, keinen Store, keinen Speicherherkunftsledger, keinen Listener, keinen Polling-Runner und keine Bilanzbuchung.",
+        "title": "Verbraucher konfigurieren"
+      },
       "reconfigure": {
         "data": {
           "topology": "Messtopologie"
@@ -62,9 +74,34 @@
         "title": "Kumulative Energiequellen auswählen"
       },
       "storage": {
-        "data": {},
-        "description": "Der Entwurf der Messquellen ist gültig. Die Speicherkonfiguration ist der nächste Entwicklungsschritt in Issue #6. Die Einrichtung kann noch nicht abgeschlossen werden; es werden weder Config Entry noch Store, Listener, Polling-Runner oder Bilanzbuchung erzeugt.",
-        "title": "Stromspeicher"
+        "data": {
+          "battery_present": "Stromspeicher"
+        },
+        "data_description": {
+          "battery_present": "Wähle ausdrücklich aus, ob diese Anlage einen Stromspeicher besitzt. Bei einer neuen Einrichtung gibt es keine Vorauswahl; eine Rekonfiguration schlägt nur die bestehende Auswahl vor."
+        },
+        "description": "Gib an, ob die Anlage einen Stromspeicher besitzt. Diese Auswahl erweitert nur den unverbindlichen Konfigurationsentwurf; sie erzeugt oder ändert keinen Config Entry, keinen Store, keinen Speicherherkunftsledger, keinen Listener, keinen Polling-Runner und kein Bilanzergebnis.",
+        "title": "Stromspeicher auswählen"
+      },
+      "storage_sources": {
+        "data": {
+          "battery_charge": "Speicherladung",
+          "battery_discharge": "Speicherentladung",
+          "battery_identity": "Physischer Speicher",
+          "battery_sources_confirmed": "Ich bestätige die Richtungen der Speicherquellen und den Synchronitätsvertrag",
+          "round_trip_efficiency_percent": "AC-Rundtrip-Wirkungsgrad",
+          "usable_capacity_kwh": "Nutzbare Ausgangskapazität"
+        },
+        "data_description": {
+          "battery_charge": "Richtungsgetrennte kumulative Energie, die beim Laden am AC-Eingang des Speichers gemessen wird.",
+          "battery_discharge": "Richtungsgetrennte kumulative Energie, die beim Entladen am AC-Ausgang des Speichers gemessen wird.",
+          "battery_identity": "Bei der Rekonfiguration eines vorhandenen Speichers erforderlich; keine Option ist vorausgewählt. Wähle einen Austausch auch dann aus, wenn die Zähler-Entities gleich geblieben sind, denn CO2 Saver kann einen physischen Austausch hinter unveränderten Zählern nicht erkennen. Derselbe Speicher behält seine interne Identität; die Auswahl Austausch erzeugt einmalig eine neue Entwurfsidentität. Die Auswahl wird nicht als dauerhaftes Merkmal gespeichert. Wenn der vollständige Flow in Issue #8 eine wirksame Änderung übernimmt, startet er ein prospektives Segment, quarantänisiert den bisherigen Speicherbestand konservativ und berechnet historische Werte nie neu.",
+          "battery_sources_confirmed": "Bestätige, dass Laden und Entladen die korrekten getrennten Richtungen verwenden und aus derselben atomaren physischen Erfassung wie alle ausgewählten PV- und Netzrollen stammen, mit exakt demselben co2saver_period_end.",
+          "round_trip_efficiency_percent": "Gib eine einfache Dezimalzahl größer als 0 und höchstens 100 ein. Auch der vorgeschlagene Wert von 90 % muss sichtbar bestätigt werden.",
+          "usable_capacity_kwh": "Gib die am AC-Ausgang des Speichers nutzbare Energie von 0.1 bis 1000 kWh ein. Es gibt keinen Standardwert."
+        },
+        "description": "Wähle getrennte kumulative AC-Energiesensoren für Speicherladung und -entladung. Sie müssen registriert und aktiv sein und dieselben Anforderungen an sensor-Entity, Geräteklasse energy, Zustandsklasse total oder total_increasing sowie Wh/kWh/MWh wie die PV- und Netzquellen erfüllen. Jede Energierolle muss aus derselben atomaren physischen Erfassung stammen, in co2saver_period_end exakt denselben autoritativen UTC-Zeitstempel ausweisen und mindestens alle fünf Minuten neu gemessen werden. Die Veröffentlichung muss innerhalb von 60 Sekunden nach dem Periodenende und rollenübergreifend innerhalb von 60 Sekunden erfolgen. Gib Kapazität und Wirkungsgrad als einfache Dezimaltexte mit Punkt ein; Komma, Exponentialschreibweise sowie umgebende Leerzeichen werden abgelehnt.",
+        "title": "Stromspeicher konfigurieren"
       },
       "user": {
         "data": {
@@ -79,6 +116,18 @@
     }
   },
   "selector": {
+    "battery_identity": {
+      "options": {
+        "physical_battery_replaced": "Physischer Speicher wurde ersetzt",
+        "same_physical_battery": "Derselbe physische Speicher"
+      }
+    },
+    "battery_present": {
+      "options": {
+        "with_battery": "Mit Stromspeicher",
+        "without_battery": "Ohne Stromspeicher"
+      }
+    },
     "topology": {
       "options": {
         "inverter": "Wechselrichter (PV-Erzeugung gemessen)",

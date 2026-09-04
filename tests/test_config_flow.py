@@ -140,6 +140,11 @@ async def test_sources_reach_storage_without_committing(
         assert flow.unique_id is None
         draft["sources"].clear()
         assert flow.configuration_draft["sources"]
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {"battery_present": "without_battery"}
+        )
+        assert result["step_id"] == "consumers"
+        assert result["errors"] == {}
         result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
         assert result["type"] is FlowResultType.FORM
         assert result["errors"] == {"base": "setup_incomplete"}
