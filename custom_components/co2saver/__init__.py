@@ -7,12 +7,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from homeassistant.config_entries import ConfigEntry
-
 if TYPE_CHECKING:
+    from homeassistant.config_entries import ConfigEntry
     from homeassistant.core import HomeAssistant
 
-type Co2SaverConfigEntry = ConfigEntry[None]
+    type Co2SaverConfigEntry = ConfigEntry[None]
 
 
 async def async_setup_entry(

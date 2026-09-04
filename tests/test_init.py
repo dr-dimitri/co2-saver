@@ -16,8 +16,12 @@ if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
 
 
-async def test_setup_and_unload_config_entry(hass: HomeAssistant) -> None:
+async def test_setup_and_unload_config_entry(
+    hass: HomeAssistant,
+    enable_custom_integrations: None,
+) -> None:
     """Set up and unload an otherwise empty config entry."""
+    _ = enable_custom_integrations
     entry = MockConfigEntry(domain=DOMAIN, title="CO2 Saver", data={})
     entry.add_to_hass(hass)
 
