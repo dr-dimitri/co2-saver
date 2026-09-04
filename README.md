@@ -28,6 +28,14 @@ Die geplante Konfiguration unterstützt zwei klar getrennte Verbrauchsmodelle:
 1. Ein aggregierter Verbrauchssensor enthält Haus und zusätzliche Verbraucher. Zusätzliche Verbraucher können daraus über definierte Anteile zugeordnet werden; die Summe bleibt auf den gemessenen Gesamtverbrauch begrenzt.
 2. Haus und zusätzliche Verbraucher werden mit separaten, nicht überlappenden Sensoren erfasst.
 
+Kumulative Energiequellen werden ausschließlich an UTC-Minutenwechseln als
+gemeinsamer Messvektor gelesen; einzelne Home-Assistant-State-Events lösen keine
+zusätzliche Auswertung aus. Ein am Taktzeitpunkt ungültiger Eingang verwirft das
+Intervall.
+Wechselt ein Zähler zwischen den unterstützten Einheiten `Wh`, `kWh` und `MWh`,
+wird er konservativ ohne Delta neu gebaselined, damit kein unbewiesener
+Maßstabssprung als Energie erscheint.
+
 Die Festlegungen zu Messwerttypen, Emissionsfaktoren, Speicherherkunft, Verlusten und Zeitbezug stehen im angenommenen [Mess- und CO₂-Bilanzierungsvertrag](docs/decisions/0001-accounting-and-input-contract.md). Abhängige Implementierung muss diesen Vertrag einhalten.
 
 ## Fachlicher Kern
