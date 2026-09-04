@@ -2,9 +2,10 @@
 
 CO2 Saver wird eine Home-Assistant-Custom-Integration, die nachvollziehbar berechnet, wie viele Treibhausgasemissionen durch selbst erzeugten und selbst verbrauchten PV-Strom vermieden werden.
 
-> **Status:** Frühe Entwicklungsphase. Das Integrationsgerüst ist ladbar und
-> entladbar; der Home-Assistant-unabhängige Fachkern wird entlang der
-> Issue-Roadmap schrittweise an Messaufnahme und Entities angebunden.
+> **Status:** Frühe Entwicklungsphase. Der Config Flow kann die Messtopologie
+> und ihre PV-/Netzquellen als unverbindlichen Entwurf prüfen. Er endet bewusst
+> vor der noch ausstehenden Speicherkonfiguration: Es gibt noch keine fertig
+> konfigurierbare Anlage, laufende Messauswertung oder CO₂-Buchung.
 
 ## Zielbild
 
@@ -20,6 +21,40 @@ Die Integration soll Energieflüsse aus vorhandenen Home-Assistant-Entitäten au
 ## Zentrale Bilanzierungsregel
 
 Direkt genutzter PV-Strom kann beim Verbrauch bilanziert werden. In einen Speicher geladener PV-Strom erzeugt zu diesem Zeitpunkt noch keine Einsparung: Die zugehörige Vermeidung wird erst anerkannt, wenn nachweislich PV-stämmige Energie aus dem Speicher an einen erfassten Verbraucher abgegeben wird. Direkte Nutzung und spätere Speicherentladung dürfen niemals doppelt gezählt werden.
+
+## Aktueller Konfigurationsstand
+
+Der erste Abschnitt des zusammenhängenden UI-Config-Flows ist umgesetzt. Er
+erfasst genau eine der beiden Messtopologien und zeigt nur deren Quellenfelder:
+
+| Topologie | Pflichtquellen | Optionale Quelle |
+| --- | --- | --- |
+| Wechselrichter | PV-Erzeugung, Netzbezug und Netzeinspeisung | keine |
+| Smartmeter | Netzbezug und Netzeinspeisung | PV-Erzeugung nur zur Plausibilitätsprüfung |
+
+Alle ausgewählten Quellen müssen in Home Assistants Entity Registry
+eingetragene, richtungsgetrennte kumulative AC-Energiesensoren sein. Zulässig
+sind ausschließlich `sensor`-Entities mit `device_class: energy`,
+`state_class: total` oder `total_increasing` und der Einheit `Wh`, `kWh` oder
+`MWh`. Ein vorzeichenbehafteter Nettozähler erfüllt diesen Vertrag nicht.
+
+Jede Rolle muss mindestens alle fünf Minuten neu gemessen und höchstens 60
+Sekunden nach Ende ihrer Messperiode in Home Assistant veröffentlicht werden;
+auch die Veröffentlichungszeitpunkte der Rollen dürfen höchstens 60 Sekunden
+auseinanderliegen. Entscheidend ist ein bei allen Rollen exakt identisches
+State-Attribut `co2saver_period_end`: Es muss das echte, messseitig erzeugte
+UTC-Ende derselben physischen Erfassungsperiode enthalten. Eine gerundete
+Home-Assistant-Zeit oder ein aus dem Empfangszeitpunkt abgeleiteter Wert reicht
+nicht aus. Der Flow verlangt die ausdrückliche Bestätigung dieses
+Synchronitätsvertrags. Ein konkretes MQTT-Referenzmuster steht im
+[Mess- und CO₂-Bilanzierungsvertrag](docs/decisions/0001-accounting-and-input-contract.md#21-konkreter-synchroner-quellpfad).
+
+Nach einer gültigen Quellenauswahl zeigt der Flow lediglich den Platzhalter für
+die in Issue #6 folgende Speicherkonfiguration. Bis die Schritte #6 bis #8
+vollständig umgesetzt sind, erzeugt er weder Config Entry noch Store, Listener,
+Polling-Runner oder Bilanzbuchung. Auch eine Rekonfiguration bleibt bis zum
+späteren Abschluss des gesamten Flows ein Entwurf; vorhandener Store-Locator,
+historische Summen und die aktive Konfiguration bleiben unverändert.
 
 ## Eingabemodelle
 
@@ -54,10 +89,11 @@ bereit. Der Store erhält den Codec für den vollständigen Zustand und speicher
 Messbaseline und spätere Bilanzwerte gemeinsam in einer verifizierten
 Transaktion. Er initialisiert einen fehlenden Zustand nur nach ausdrücklich
 bestätigter physischer Abwesenheit; ein leeres Ladeergebnis genügt dafür nicht.
-Die Komponenten sind noch nicht an Config Entries angebunden: Die
-Konfiguration folgt in den Issues #5 bis #8, die atomare Aktivierung des Runners
-ohne Speicher in #9 und mit Speicherbilanz in #10. Ergebnis-Entities folgen in
-den dafür vorgesehenen Roadmap-Issues.
+Der erste UI-Schritt für Topologie und PV-/Netzquellen nutzt diesen Vertrag
+bereits zur aktuellen Validierung, hält seinen Zustand aber absichtlich nur als
+Flow-Entwurf. Die restliche Konfiguration folgt in den Issues #6 bis #8, die
+atomare Aktivierung des Runners ohne Speicher in #9 und mit Speicherbilanz in
+#10. Ergebnis-Entities folgen in den dafür vorgesehenen Roadmap-Issues.
 
 ## Entwicklung
 
