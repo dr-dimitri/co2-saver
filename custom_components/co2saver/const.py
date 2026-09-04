@@ -3,4 +3,5 @@
 
 """Constants for CO2 Saver."""
 
+ATTR_CO2SAVER_PERIOD_END = "co2saver_period_end"
 DOMAIN = "co2saver"

@@ -45,9 +45,19 @@ gebildete Energieintervalle ohne Zugriff auf Home-Assistant-Zustände. Energie w
 intern exakt in `kWh`, Emissionen in `gCO₂e` und Faktoren in `gCO₂e/kWh`
 gerechnet. Es ermittelt nur mathematisch garantierte Flussuntergrenzen, führt
 nicht sicher zuordenbare lokale Energie separat und hält den Herkunftsnachweis
-eines optionalen Speichers als konservative Schranken. Messwertaufnahme,
-Persistenz, Konfiguration und Ergebnis-Entities folgen in den jeweils dafür
-vorgesehenen Roadmap-Issues.
+eines optionalen Speichers als konservative Schranken.
+
+Das Modul `custom_components/co2saver/measurement` liest injizierte kumulative
+Energiequellen am UTC-Minutenraster, bildet daraus restartfest und fail-closed
+exakte Intervalle und stellt einen versionierten Home-Assistant-Store-Adapter
+bereit. Der Store erhält den Codec für den vollständigen Zustand und speichert
+Messbaseline und spätere Bilanzwerte gemeinsam in einer verifizierten
+Transaktion. Er initialisiert einen fehlenden Zustand nur nach ausdrücklich
+bestätigter physischer Abwesenheit; ein leeres Ladeergebnis genügt dafür nicht.
+Die Komponenten sind noch nicht an Config Entries angebunden: Die
+Konfiguration folgt in den Issues #5 bis #8, die atomare Aktivierung des Runners
+ohne Speicher in #9 und mit Speicherbilanz in #10. Ergebnis-Entities folgen in
+den dafür vorgesehenen Roadmap-Issues.
 
 ## Entwicklung
 
