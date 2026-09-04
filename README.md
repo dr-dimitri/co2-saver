@@ -30,7 +30,7 @@ Offene Festlegungen zu Messwerttypen, Emissionsfaktoren, Speicherherkunft, Verlu
 
 ## Entwicklung
 
-Verbindliche Arbeitsregeln stehen in [`AGENTS.md`](AGENTS.md). Die Repo-Skills unter [`.agents/skills`](.agents/skills) enthalten die fachlichen CO₂-Bilanzierungsregeln und die Home-Assistant-Entwicklungskonventionen. Die GitHub-Issues bilden eine strikt abhängige Umsetzungskette; gearbeitet wird jeweils nur am nächsten unblocked Issue.
+Verbindliche Arbeitsregeln stehen in [`AGENTS.md`](AGENTS.md). Die Repo-Skills unter [`.agents/skills`](.agents/skills) enthalten die fachlichen CO₂-Bilanzierungsregeln und die Home-Assistant-Entwicklungskonventionen. Die [GitHub-Issues](https://github.com/dr-dimitri/co-saver/issues) bilden eine strikt abhängige Umsetzungskette; gearbeitet wird jeweils nur am nächsten nicht blockierten Issue.
 
 ## Lizenz
 
