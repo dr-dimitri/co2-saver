@@ -2,7 +2,8 @@
 
 CO2 Saver wird eine Home-Assistant-Custom-Integration, die nachvollziehbar berechnet, wie viele Treibhausgasemissionen durch selbst erzeugten und selbst verbrauchten PV-Strom vermieden werden.
 
-> **Status:** Planungs- und Projektaufbauphase. Die Integration ist noch nicht installierbar.
+> **Status:** Frühe Entwicklungsphase. Das leere Integrationsgerüst ist ladbar und
+> entladbar; die fachliche CO₂-Berechnung folgt entlang der Issue-Roadmap.
 
 ## Zielbild
 
@@ -31,6 +32,25 @@ Die Festlegungen zu Messwerttypen, Emissionsfaktoren, Speicherherkunft, Verluste
 ## Entwicklung
 
 Verbindliche Arbeitsregeln stehen in [`AGENTS.md`](AGENTS.md). Die Repo-Skills unter [`.agents/skills`](.agents/skills) enthalten die fachlichen CO₂-Bilanzierungsregeln und die Home-Assistant-Entwicklungskonventionen. Die [GitHub-Issues](https://github.com/dr-dimitri/co-saver/issues) bilden eine strikt abhängige Umsetzungskette; gearbeitet wird jeweils nur am nächsten nicht blockierten Issue.
+
+Unterstützte Mindestbasis ist Home Assistant 2026.9.0 mit Python 3.14.2.
+Die Entwicklungs- und CI-Umgebung ist auf Home Assistant 2026.9.0 festgelegt:
+
+```bash
+python3.14 -m venv .venv
+.venv/bin/python -m pip install --upgrade pip
+.venv/bin/python -m pip install --editable '.[test]'
+```
+
+Die vollständigen lokalen Prüfungen entsprechen der CI:
+
+```bash
+.venv/bin/python -m compileall -q custom_components tests
+.venv/bin/ruff format --check .
+.venv/bin/ruff check .
+.venv/bin/mypy
+.venv/bin/pytest --cov=custom_components.co2saver --cov-report=term-missing
+```
 
 ## Lizenz
 
