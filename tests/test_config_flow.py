@@ -145,9 +145,9 @@ async def test_sources_reach_storage_without_committing(
         )
         assert result["step_id"] == "consumers"
         assert result["errors"] == {}
-        result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
-        assert result["type"] is FlowResultType.FORM
-        assert result["errors"] == {"base": "setup_incomplete"}
+        with pytest.raises(InvalidData) as error:
+            await hass.config_entries.flow.async_configure(result["flow_id"], {})
+        assert error.value.path == ["mode"]
         hass.config_entries.flow.async_abort(result["flow_id"])
         assert not hass.config_entries.async_entries(DOMAIN)
         save.assert_not_called()

@@ -3,10 +3,10 @@
 CO2 Saver wird eine Home-Assistant-Custom-Integration, die nachvollziehbar berechnet, wie viele Treibhausgasemissionen durch selbst erzeugten und selbst verbrauchten PV-Strom vermieden werden.
 
 > **Status:** Frühe Entwicklungsphase. Der Config Flow kann Messtopologie,
-> PV-/Netzquellen und einen optionalen Stromspeicher als unverbindlichen Entwurf
-> prüfen. Er endet bewusst vor der noch ausstehenden Verbraucherkonfiguration:
-> Es gibt noch keine fertig konfigurierbare Anlage, laufende Messauswertung oder
-> CO₂-Buchung.
+> PV-/Netzquellen, einen optionalen Stromspeicher und die Verbraucherzuordnung
+> als unverbindlichen Entwurf prüfen. Er endet bewusst am Platzhalter für den
+> ausstehenden Abschluss in Issue #8: Es gibt noch keine fertig konfigurierbare
+> Anlage, laufende Messauswertung oder CO₂-Buchung.
 
 ## Zielbild
 
@@ -25,9 +25,9 @@ Direkt genutzter PV-Strom kann beim Verbrauch bilanziert werden. In einen Speich
 
 ## Aktueller Konfigurationsstand
 
-Die ersten beiden Abschnitte des zusammenhängenden UI-Config-Flows sind
-umgesetzt. Zuerst erfasst der Flow genau eine der beiden Messtopologien und
-zeigt nur deren Quellenfelder:
+Die ersten drei Abschnitte des zusammenhängenden UI-Config-Flows sind umgesetzt.
+Zuerst erfasst der Flow genau eine der beiden Messtopologien und zeigt nur deren
+Quellenfelder:
 
 | Topologie | Pflichtquellen | Optionale Quelle |
 | --- | --- | --- |
@@ -84,20 +84,53 @@ wird, wirkt jede fachliche Änderung nur prospektiv über einen neuen
 vollständigen Segmentfingerabdruck und einen konservativ quarantänisierten
 Speicherbestand; historische Summen werden nicht neu berechnet.
 
-Eine gültige Auswahl mit oder ohne Speicher erreicht lediglich den Platzhalter
-für die in Issue #7 folgende Verbraucherkonfiguration. Bis die Schritte #7 und
-#8 vollständig umgesetzt sind, erzeugt der Flow keinen Config Entry, keinen
-Store, keinen Speicherherkunftsledger, keinen Listener, keinen Polling-Runner und
-keine Bilanzbuchung. Auch eine Rekonfiguration bleibt bis zum späteren Abschluss
-des gesamten Flows ein Entwurf; vorhandener Store-Locator, historische Summen
-und die aktive Konfiguration bleiben unverändert.
+Eine gültige Verbraucherzuordnung erreicht lediglich den Platzhalter für den in
+Issue #8 folgenden Faktor- und Abschluss-Schritt. Bis Issue #8 vollständig
+umgesetzt ist, erzeugt der Flow keinen Config Entry, keinen Store, keinen
+Speicherherkunftsledger, keinen Listener, keinen Polling-Runner und keine
+Bilanzbuchung. Auch Rekonfiguration und vorbereiteter Options-Flow bleiben bis
+zum späteren Abschluss des gesamten Flows reine Entwürfe; vorhandener
+Store-Locator, historische Summen und die aktive Konfiguration bleiben
+unverändert.
 
 ## Eingabemodelle
 
-Die geplante Konfiguration unterstützt zwei klar getrennte Verbrauchsmodelle:
+Die Konfiguration unterstützt zwei klar getrennte Verbrauchsmodelle:
 
-1. Ein aggregierter Verbrauchssensor enthält Haus und zusätzliche Verbraucher. Zusätzliche Verbraucher können daraus über definierte Anteile zugeordnet werden; die Summe bleibt auf den gemessenen Gesamtverbrauch begrenzt.
-2. Haus und zusätzliche Verbraucher werden mit separaten, nicht überlappenden Sensoren erfasst.
+1. **Gesamtmessung mit Anteilen:** Ein kumulativer Zähler erfasst den gesamten
+   lokalen Verbrauch von Haushalt und allen zusätzlichen Verbrauchern. Benannte
+   zusätzliche Verbraucher erhalten jeweils einen exakten Anteil von `0` bis
+   `100 %`; ihre Summe darf `100 %` nicht überschreiten. Der Rest ist
+   Haushaltsverbrauch.
+2. **Separate Zähler:** Ein kumulativer Zähler erfasst ausschließlich den
+   Haushalt. Jeder zusätzliche Verbraucher besitzt einen eigenen, physisch nicht
+   überlappenden kumulativen Zähler. Der lokale Gesamtverbrauch ist die Summe
+   dieser Eingänge.
+
+In beiden Modi schließen Verbrauchszähler Speicherladung und Netzeinspeisung
+aus. Im separaten Modus schließt der Haushaltszähler außerdem alle zusätzlichen
+Verbraucher aus. Alle Lastrollen müssen verschiedene Entities verwenden, an
+derselben atomaren physischen Erfassung wie PV-, Netz- und gegebenenfalls
+Speicherrollen teilnehmen und exakt dasselbe `co2saver_period_end` sowie die
+bereits beschriebenen Frische- und Veröffentlichungsgrenzen erfüllen. Weil
+Entity-Namen keine physische Überschneidungsfreiheit beweisen, verlangt der Flow
+hierfür eine ausdrückliche Bestätigung.
+
+Anteile werden wie die Speicherparameter als rohe Dezimaltexte mit Punkt
+validiert; Komma, Exponentialschreibweise, binäre Gleitkommawerte und umgebende
+Leerzeichen sind nicht zulässig. Sie zerlegen ausschließlich die gemessene
+lokale Energie. Die garantierte systemweite CO₂-Ersparnis wird nicht einfach
+proportional auf Verbraucher verteilt, sondern später aus den konservativen
+verbraucherspezifischen Flussuntergrenzen berechnet.
+
+Zusätzliche Verbraucher sind optional und können im Flow hinzugefügt,
+umbenannt, neu zugeordnet oder entfernt werden. Jeder Verbraucher besitzt eine
+stabile interne UUID: Bearbeiten und Umbenennen erhalten sie, Entfernen beendet
+die zugehörige künftige Zeitreihe, und erneutes Hinzufügen erzeugt auch bei
+gleichem Namen eine neue UUID. Beim Wechsel des Verbrauchsmodus bleiben UUIDs
+und Namen erhalten; inkompatible Zuordnungen und der Haushaltszähler werden
+gelöscht und müssen vollständig neu zugewiesen werden. Historische Werte werden
+nicht verändert.
 
 Kumulative Energiequellen werden ausschließlich an UTC-Minutenwechseln als
 gemeinsamer Messvektor gelesen; einzelne Home-Assistant-State-Events lösen keine
@@ -125,12 +158,12 @@ bereit. Der Store erhält den Codec für den vollständigen Zustand und speicher
 Messbaseline und spätere Bilanzwerte gemeinsam in einer verifizierten
 Transaktion. Er initialisiert einen fehlenden Zustand nur nach ausdrücklich
 bestätigter physischer Abwesenheit; ein leeres Ladeergebnis genügt dafür nicht.
-Die ersten beiden UI-Schritte für Topologie, PV-/Netzquellen und einen optionalen
-Speicher nutzen diesen Vertrag bereits zur aktuellen Validierung, halten ihren
-Zustand aber absichtlich nur als Flow-Entwurf. Die restliche Konfiguration folgt
-in den Issues #7 und #8, die atomare Aktivierung des Runners ohne Speicher in #9
-und mit Speicherbilanz in #10. Ergebnis-Entities folgen in den dafür
-vorgesehenen Roadmap-Issues.
+Die ersten drei UI-Schritte für Topologie, PV-/Netzquellen, einen optionalen
+Speicher und Verbraucher nutzen diesen Vertrag bereits zur aktuellen
+Validierung, halten ihren Zustand aber absichtlich nur als Flow-Entwurf. Die
+restliche Konfiguration und der atomare Abschluss folgen in Issue #8, die
+Aktivierung des Runners ohne Speicher in #9 und mit Speicherbilanz in #10.
+Ergebnis-Entities folgen in den dafür vorgesehenen Roadmap-Issues.
 
 ## Entwicklung
 

@@ -101,3 +101,74 @@ async def test_flow_translations(
         assert selectors[
             f"component.{DOMAIN}.selector.battery_present.options.{choice}"
         ]
+
+
+@pytest.mark.parametrize("language", ["en", "de"])
+@pytest.mark.parametrize("category", ["config", "options"])
+async def test_consumer_translations(
+    hass: HomeAssistant,
+    enable_custom_integrations: None,
+    language: str,
+    category: str,
+) -> None:
+    """Load the shared editor's labels and errors through HA's public API."""
+    _ = enable_custom_integrations
+    translated = await async_get_translations(hass, language, category, {DOMAIN})
+    prefix = f"component.{DOMAIN}.{category}"
+    assert not any("[%key:" in value for value in translated.values())
+    step_fields = {
+        "consumers": ("mode",),
+        "aggregate_load": ("household_source", "load_measurement_confirmed"),
+        "separate_load": ("household_source", "load_measurement_confirmed"),
+        "consumer_menu": ("action",),
+        "consumer_add": (
+            "name",
+            "share_percent",
+            "source",
+            "consumer_measurement_confirmed",
+        ),
+        "consumer_edit": ("consumer_id",),
+        "consumer_edit_details": (
+            "name",
+            "share_percent",
+            "source",
+            "consumer_measurement_confirmed",
+        ),
+        "consumer_remove": ("consumer_id", "confirm_removal"),
+        "factors": (),
+    }
+    for step, fields in step_fields.items():
+        assert translated[f"{prefix}.step.{step}.title"]
+        assert translated[f"{prefix}.step.{step}.description"]
+        for field in fields:
+            assert translated[f"{prefix}.step.{step}.data.{field}"]
+    for error in (
+        "invalid_consumption_mode",
+        "load_confirmation_required",
+        "consumer_confirmation_required",
+        "invalid_consumer_action",
+        "consumer_not_found",
+        "removal_confirmation_required",
+        "invalid_name",
+        "share_out_of_range",
+        "shares_exceed_total",
+        "invalid_consumer_plan",
+        "invalid_consumer_id",
+        "duplicate_consumer_id",
+        "invalid_number",
+        "invalid_decimal_separator",
+        "duplicate_source",
+        "invalid_unit",
+        "invalid_source_vector",
+        "source_unavailable",
+        "required",
+        "setup_incomplete",
+    ):
+        assert translated[f"{prefix}.error.{error}"]
+    selectors = await async_get_translations(hass, language, "selector", {DOMAIN})
+    for selector, choices in {
+        "consumption_mode": ("aggregate_shares", "separate_meters"),
+        "consumer_action": ("add", "edit", "remove", "finish"),
+    }.items():
+        for choice in choices:
+            assert selectors[f"component.{DOMAIN}.selector.{selector}.options.{choice}"]
