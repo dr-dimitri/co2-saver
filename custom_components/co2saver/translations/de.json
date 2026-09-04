@@ -1,0 +1,90 @@
+{
+  "config": {
+    "abort": {
+      "already_configured": "Eine CO2-Saver-Anlage verwendet dieses Paar aus Netzbezugs- und Netzeinspeisungsquelle bereits."
+    },
+    "error": {
+      "confirmation_required": "Bestätige, dass alle ausgewählten Quellen den Vertrag für synchronisierte physische Messungen erfüllen.",
+      "duplicate_source": "Jede Messrolle muss eine andere Quell-Entity verwenden.",
+      "future_last_reported": "Home Assistant meldet für diese Quelle einen Veröffentlichungszeitpunkt in der Zukunft.",
+      "future_period_end": "Das Ende der physischen Messperiode liegt in der Zukunft.",
+      "invalid_device_class": "Die ausgewählte Quelle muss die Geräteklasse energy besitzen.",
+      "invalid_domain": "Die ausgewählte Quelle muss eine sensor-Entity sein.",
+      "invalid_last_reported": "Home Assistant stellt für diese Quelle keinen gültigen Veröffentlichungszeitpunkt (last_reported) bereit.",
+      "invalid_period_end": "Die ausgewählte Quelle muss im State-Attribut co2saver_period_end einen gültigen UTC-Zeitstempel bereitstellen.",
+      "invalid_selection": "Wähle eine gültige Quell-Entity aus.",
+      "invalid_source": "Die ausgewählte Quelle erfüllt den Vertrag für kumulative Energiequellen nicht.",
+      "invalid_source_vector": "Die aktuellen Quellwerte bilden keine vollständige, gültige und synchronisierte Messung.",
+      "invalid_state_class": "Die ausgewählte Quelle muss die Zustandsklasse total oder total_increasing besitzen.",
+      "invalid_topology": "Wähle eine der unterstützten Messtopologien aus.",
+      "invalid_unit": "Die ausgewählte Quelle muss Wh, kWh oder MWh verwenden.",
+      "invalid_value": "Die ausgewählte Quelle muss aktuell einen endlichen, nichtnegativen kumulativen Energiewert liefern.",
+      "period_after_publication": "Das Ende der physischen Messperiode darf nicht nach dem Home-Assistant-Veröffentlichungszeitpunkt liegen.",
+      "publication_delay": "Die Quelle wurde mehr als 60 Sekunden nach Ende ihrer physischen Messperiode veröffentlicht.",
+      "publication_skew": "Die ausgewählten Rollen wurden mit mehr als 60 Sekunden Abstand veröffentlicht.",
+      "required": "Diese Quelle ist für die ausgewählte Topologie erforderlich.",
+      "setup_incomplete": "Die Einrichtung kann noch nicht abgeschlossen werden. Die Speicherkonfiguration ist der nächste Entwicklungsschritt in Issue #6; es wurde keine Konfiguration gespeichert.",
+      "source_disabled": "Die ausgewählte Quelle ist in der Entity Registry deaktiviert.",
+      "source_missing": "Die ausgewählte Quelle hat keinen aktuellen Home-Assistant-Zustand.",
+      "source_not_registered": "Die ausgewählte Quelle benötigt einen Eintrag in der Entity Registry.",
+      "source_stale": "Die physische Messung der Quelle ist älter als fünf Minuten.",
+      "source_unavailable": "Die ausgewählte Quelle ist derzeit nicht verfügbar oder unbekannt.",
+      "sources_not_synchronized": "Alle ausgewählten Quellen müssen in co2saver_period_end exakt dasselbe Ende der physischen Messperiode ausweisen.",
+      "unexpected_field": "Dieses Quellenfeld ist für die ausgewählte Topologie nicht zulässig."
+    },
+    "step": {
+      "reconfigure": {
+        "data": {
+          "topology": "Messtopologie"
+        },
+        "data_description": {
+          "topology": "Wähle, ob die PV-Erzeugung am Wechselrichter gemessen oder aus der vollständigen Smartmeter-Bilanz abgeleitet wird."
+        },
+        "description": "Wähle die Topologie für den vorgeschlagenen Quellenwechsel. Die Auswahl bleibt ein Entwurf: Vorhandene Konfiguration, Store-Locator und historische Summen bleiben unverändert, bis der vollständige Rekonfigurations-Flow in seinem letzten Schritt bestätigt werden kann.",
+        "title": "Messtopologie ändern"
+      },
+      "sources": {
+        "data": {
+          "grid_export": "Netzeinspeisung",
+          "grid_import": "Netzbezug",
+          "pv_generation": "PV-Erzeugung",
+          "pv_plausibility": "PV-Erzeugung (optionale Plausibilitätsprüfung)",
+          "synchronous_sources_confirmed": "Ich bestätige, dass alle ausgewählten Quellen den Synchronitätsvertrag erfüllen"
+        },
+        "data_description": {
+          "grid_export": "Richtungsgetrennte kumulative AC-Energie, die am Netzanschlusspunkt eingespeist wird.",
+          "grid_import": "Richtungsgetrennte kumulative AC-Energie, die am Netzanschlusspunkt bezogen wird.",
+          "pv_generation": "Kumulative PV-Energie, die am AC-Ausgang des Wechselrichters gemessen wird.",
+          "pv_plausibility": "Optionale kumulative PV-Energie, die nur den aus der Smartmeter-Bilanz abgeleiteten Wert prüft; sie ist keine zweite Wahrheitsquelle.",
+          "synchronous_sources_confirmed": "Bestätige, dass jede Rolle aus derselben atomaren physischen Erfassung stammt und deren exaktes gemeinsames UTC-Periodenende in co2saver_period_end ausweist."
+        },
+        "description": "Wähle in Home Assistant registrierte und aktive, kumulative, richtungsgetrennte AC-Energiesensoren. Jede Quelle muss eine sensor-Entity mit Geräteklasse energy, Zustandsklasse total oder total_increasing und der Einheit Wh, kWh oder MWh sein. Alle Rollen müssen aus derselben atomaren physischen Erfassung stammen, in co2saver_period_end exakt denselben autoritativen UTC-Zeitstempel ausweisen und mindestens alle fünf Minuten neu gemessen werden. Der Zeitstempel muss vom Zähler oder Gateway stammen, nicht aus einer gerundeten Home-Assistant-Zeit. Jede Rolle muss höchstens 60 Sekunden nach dem Periodenende veröffentlicht werden; zwischen den Veröffentlichungen der Rollen dürfen ebenfalls höchstens 60 Sekunden liegen. Bestätige diesen Vertrag, um fortzufahren.",
+        "title": "Kumulative Energiequellen auswählen"
+      },
+      "storage": {
+        "data": {},
+        "description": "Der Entwurf der Messquellen ist gültig. Die Speicherkonfiguration ist der nächste Entwicklungsschritt in Issue #6. Die Einrichtung kann noch nicht abgeschlossen werden; es werden weder Config Entry noch Store, Listener, Polling-Runner oder Bilanzbuchung erzeugt.",
+        "title": "Stromspeicher"
+      },
+      "user": {
+        "data": {
+          "topology": "Messtopologie"
+        },
+        "data_description": {
+          "topology": "Wähle, ob die PV-Erzeugung am Wechselrichter gemessen oder aus der vollständigen Smartmeter-Bilanz abgeleitet wird."
+        },
+        "description": "Wähle, wie CO2 Saver die PV-Erzeugung ermittelt. Dies startet eine schrittweise Einrichtung; eine Anlage wird erst angelegt, wenn alle Konfigurationsschritte verfügbar und abgeschlossen sind.",
+        "title": "Messtopologie auswählen"
+      }
+    }
+  },
+  "selector": {
+    "topology": {
+      "options": {
+        "inverter": "Wechselrichter (PV-Erzeugung gemessen)",
+        "smart_meter": "Smartmeter (PV-Erzeugung abgeleitet)"
+      }
+    }
+  },
+  "title": "CO2 Saver"
+}

@@ -1,0 +1,90 @@
+{
+  "config": {
+    "abort": {
+      "already_configured": "A CO2 Saver plant already uses this grid import and grid export source pair."
+    },
+    "error": {
+      "confirmation_required": "Confirm that all selected sources meet the synchronized physical measurement contract.",
+      "duplicate_source": "Each measurement role must use a different source entity.",
+      "future_last_reported": "Home Assistant reports this source publication time in the future.",
+      "future_period_end": "The physical measurement period end is in the future.",
+      "invalid_device_class": "The selected source must have device class energy.",
+      "invalid_domain": "The selected source must be a sensor entity.",
+      "invalid_last_reported": "Home Assistant does not provide a valid publication time (last_reported) for this source.",
+      "invalid_period_end": "The selected source must expose a valid UTC timestamp in the co2saver_period_end state attribute.",
+      "invalid_selection": "Select a valid source entity.",
+      "invalid_source": "The selected source does not meet the cumulative energy source contract.",
+      "invalid_source_vector": "The current source values do not form a complete, valid synchronized measurement.",
+      "invalid_state_class": "The selected source must have state class total or total_increasing.",
+      "invalid_topology": "Select one of the supported measurement topologies.",
+      "invalid_unit": "The selected source must use Wh, kWh, or MWh.",
+      "invalid_value": "The selected source must currently provide a finite, non-negative cumulative energy value.",
+      "period_after_publication": "The physical measurement period end cannot be later than the Home Assistant publication time.",
+      "publication_delay": "The source was published more than 60 seconds after its physical measurement period ended.",
+      "publication_skew": "The selected roles were published more than 60 seconds apart.",
+      "required": "This source is required for the selected topology.",
+      "setup_incomplete": "Setup cannot be completed yet. Battery storage configuration is the next development step in issue #6; no configuration has been saved.",
+      "source_disabled": "The selected source is disabled in the entity registry.",
+      "source_missing": "The selected source has no current Home Assistant state.",
+      "source_not_registered": "The selected source must have an entity registry entry.",
+      "source_stale": "The source's physical measurement is more than five minutes old.",
+      "source_unavailable": "The selected source is currently unavailable or unknown.",
+      "sources_not_synchronized": "All selected sources must expose exactly the same physical period end in co2saver_period_end.",
+      "unexpected_field": "This source field is not allowed for the selected topology."
+    },
+    "step": {
+      "reconfigure": {
+        "data": {
+          "topology": "Measurement topology"
+        },
+        "data_description": {
+          "topology": "Choose whether PV generation is measured at the inverter or derived from the complete smart meter balance."
+        },
+        "description": "Choose the topology for the proposed source replacement. This remains a draft: the existing configuration, storage locator, and historical totals stay unchanged until the complete reconfiguration flow can commit in its final step.",
+        "title": "Change measurement topology"
+      },
+      "sources": {
+        "data": {
+          "grid_export": "Grid export",
+          "grid_import": "Grid import",
+          "pv_generation": "PV generation",
+          "pv_plausibility": "PV generation (optional plausibility check)",
+          "synchronous_sources_confirmed": "I confirm that all selected sources meet the synchronized measurement contract"
+        },
+        "data_description": {
+          "grid_export": "Direction-separated cumulative AC energy exported at the grid connection point.",
+          "grid_import": "Direction-separated cumulative AC energy imported at the grid connection point.",
+          "pv_generation": "Cumulative PV energy measured at the inverter's AC output.",
+          "pv_plausibility": "Optional cumulative PV energy used only to check the value derived from the smart meter balance; it is not a second source of truth.",
+          "synchronous_sources_confirmed": "Confirm that every role comes from the same atomic physical reading and exposes its exact shared UTC period end in co2saver_period_end."
+        },
+        "description": "Select cumulative, direction-separated AC energy sensors that are registered and enabled in Home Assistant. Each source must be a sensor with device class energy, state class total or total_increasing, and unit Wh, kWh, or MWh. All roles must originate from one atomic physical reading, expose exactly the same authoritative UTC timestamp in co2saver_period_end, and be measured at least every five minutes. That timestamp must come from the meter or gateway, not a rounded Home Assistant time. Each role must be published no more than 60 seconds after the period end, with no more than 60 seconds between role publications. Confirm this contract to continue.",
+        "title": "Select cumulative energy sources"
+      },
+      "storage": {
+        "data": {},
+        "description": "The measurement-source draft is valid. Battery storage configuration is the next development step in issue #6. Setup cannot yet be completed, and no Config Entry, Store, listener, polling runner, or accounting booking is created.",
+        "title": "Battery storage"
+      },
+      "user": {
+        "data": {
+          "topology": "Measurement topology"
+        },
+        "data_description": {
+          "topology": "Choose whether PV generation is measured at the inverter or derived from the complete smart meter balance."
+        },
+        "description": "Choose how CO2 Saver obtains PV generation. This starts a staged setup; no plant is created until every configuration step is available and completed.",
+        "title": "Choose measurement topology"
+      }
+    }
+  },
+  "selector": {
+    "topology": {
+      "options": {
+        "inverter": "Inverter (PV generation measured)",
+        "smart_meter": "Smart meter (PV generation derived)"
+      }
+    }
+  },
+  "title": "CO2 Saver"
+}
