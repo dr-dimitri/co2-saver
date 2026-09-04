@@ -178,7 +178,8 @@ def _is_currently_eligible(
     state = hass.states.get(entry.entity_id)
     return (
         state is not None
-        and state.attributes.get(ATTR_STATE_CLASS) in _SUPPORTED_STATE_CLASSES
+        and isinstance(state_class := state.attributes.get(ATTR_STATE_CLASS), str)
+        and state_class in _SUPPORTED_STATE_CLASSES
     )
 
 
@@ -228,37 +229,69 @@ def _shape_errors(
     return errors
 
 
-def _resolve_sources(
+def validate_energy_sources(
     hass: HomeAssistant,
-    topology: str,
-    user_input: Mapping[str, object],
-) -> tuple[dict[str, str], dict[str, str]]:
-    """Resolve accepted entity IDs or UUIDs into canonical registry UUIDs."""
+    selections: Mapping[str, object],
+) -> tuple[dict[str, str] | None, dict[str, str]]:
+    """Validate one complete energy vector and return registry identities."""
+    if not selections:
+        return None, {"base": "invalid_source_vector"}
+
     registry = er.async_get(hass)
     resolved: dict[str, str] = {}
     errors: dict[str, str] = {}
-    for role in source_fields(topology):
-        value = user_input.get(role)
-        if role == _PV_PLAUSIBILITY and (value is None or value == ""):
-            continue
-        entry = registry.async_get(value) if type(value) is str else None
-        if entry is None:
-            errors[role] = "source_not_registered"
-        elif entry.domain != SENSOR_DOMAIN:
-            errors[role] = "invalid_domain"
-        elif entry.disabled:
-            errors[role] = "source_disabled"
-        else:
-            resolved[role] = entry.id
+    for role, value in selections.items():
+        registry_id, error = _resolve_registry_source(registry, value)
+        if error is not None:
+            errors[role] = error
+        elif registry_id is not None:
+            resolved[role] = registry_id
 
+    errors.update(_duplicate_source_errors(resolved))
+    if errors:
+        return None, errors
+
+    sources = tuple(
+        EnergySourceIdentity(role=role, registry_id=registry_id)
+        for role, registry_id in resolved.items()
+    )
+    observations = HomeAssistantEnergyReader(hass, sources).read()
+    errors = _validate_current_vector(sources, observations, dt_util.utcnow())
+    if errors:
+        return None, errors
+    return resolved, {}
+
+
+def _resolve_registry_source(
+    registry: er.EntityRegistry,
+    value: object,
+) -> tuple[str | None, str | None]:
+    """Resolve one entity ID or UUID and return its field error when invalid."""
+    if value is None or value == "":
+        return None, "required"
+    if type(value) is not str or value != value.strip():
+        return None, "invalid_selection"
+    entry = registry.async_get(value)
+    if entry is None:
+        return None, "source_not_registered"
+    if entry.domain != SENSOR_DOMAIN:
+        return None, "invalid_domain"
+    if entry.disabled:
+        return None, "source_disabled"
+    return entry.id, None
+
+
+def _duplicate_source_errors(resolved: Mapping[str, str]) -> dict[str, str]:
+    """Mark every role sharing ownership of one physical registry entity."""
     roles_by_registry_id: dict[str, list[str]] = {}
     for role, registry_id in resolved.items():
         roles_by_registry_id.setdefault(registry_id, []).append(role)
-    for duplicate_roles in roles_by_registry_id.values():
-        if len(duplicate_roles) > 1:
-            for role in duplicate_roles:
-                errors.setdefault(role, "duplicate_source")
-    return resolved, errors
+    return {
+        role: "duplicate_source"
+        for duplicate_roles in roles_by_registry_id.values()
+        if len(duplicate_roles) > 1
+        for role in duplicate_roles
+    }
 
 
 def validate_source_selection(
@@ -274,19 +307,16 @@ def validate_source_selection(
     if errors:
         return None, errors
 
-    resolved, errors = _resolve_sources(hass, topology, user_input)
-    if errors:
-        return None, errors
-
-    sources = tuple(
-        EnergySourceIdentity(role=role, registry_id=resolved[role])
+    selected = {
+        role: user_input[role]
         for role in source_fields(topology)
-        if role in resolved
-    )
-    observations = HomeAssistantEnergyReader(hass, sources).read()
-    errors = _validate_current_vector(sources, observations, dt_util.utcnow())
+        if role != _PV_PLAUSIBILITY or user_input.get(role) not in (None, "")
+    }
+    resolved, errors = validate_energy_sources(hass, selected)
     if errors:
         return None, errors
+    if resolved is None:  # pragma: no cover - success contract of shared validator
+        return None, {"base": "invalid_source_vector"}
 
     grid_ids = sorted((resolved["grid_import"], resolved["grid_export"]))
     return (
@@ -304,5 +334,6 @@ __all__ = (
     "SourceDraft",
     "energy_entity_selector",
     "source_fields",
+    "validate_energy_sources",
     "validate_source_selection",
 )

@@ -163,7 +163,7 @@ class HomeAssistantEnergyReader:
             return _invalid(source, MeasurementRejectionReason.SOURCE_UNAVAILABLE)
         if device_class != SensorDeviceClass.ENERGY:
             return _invalid(source, MeasurementRejectionReason.INVALID_DEVICE_CLASS)
-        if state_class not in _VALID_STATE_CLASSES:
+        if not isinstance(state_class, str) or state_class not in _VALID_STATE_CLASSES:
             return _invalid(source, MeasurementRejectionReason.INVALID_STATE_CLASS)
         if not isinstance(unit_value, str):
             return _invalid(source, MeasurementRejectionReason.INVALID_UNIT)

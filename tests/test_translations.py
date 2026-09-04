@@ -24,7 +24,14 @@ async def test_flow_translations(
     _ = enable_custom_integrations
     translated = await async_get_translations(hass, language, "config", {DOMAIN})
     prefix = f"component.{DOMAIN}.config"
-    for step in ("user", "reconfigure", "sources", "storage"):
+    for step in (
+        "user",
+        "reconfigure",
+        "sources",
+        "storage",
+        "storage_sources",
+        "consumers",
+    ):
         assert translated[f"{prefix}.step.{step}.title"]
         assert translated[f"{prefix}.step.{step}.description"]
     for role in (
@@ -35,6 +42,16 @@ async def test_flow_translations(
         "synchronous_sources_confirmed",
     ):
         assert translated[f"{prefix}.step.sources.data.{role}"]
+    assert translated[f"{prefix}.step.storage.data.battery_present"]
+    for field in (
+        "battery_charge",
+        "battery_discharge",
+        "usable_capacity_kwh",
+        "round_trip_efficiency_percent",
+        "battery_sources_confirmed",
+        "battery_identity",
+    ):
+        assert translated[f"{prefix}.step.storage_sources.data.{field}"]
     for error in (
         "invalid_topology",
         "required",
@@ -63,9 +80,24 @@ async def test_flow_translations(
         "invalid_source",
         "invalid_source_vector",
         "setup_incomplete",
+        "invalid_battery_choice",
+        "battery_confirmation_required",
+        "invalid_battery_identity",
+        "invalid_number",
+        "invalid_decimal_separator",
+        "capacity_out_of_range",
+        "efficiency_out_of_range",
     ):
         assert translated[f"{prefix}.error.{error}"]
     assert translated[f"{prefix}.abort.already_configured"]
     selectors = await async_get_translations(hass, language, "selector", {DOMAIN})
     for topology in ("inverter", "smart_meter"):
         assert selectors[f"component.{DOMAIN}.selector.topology.options.{topology}"]
+    for identity in ("same_physical_battery", "physical_battery_replaced"):
+        assert selectors[
+            f"component.{DOMAIN}.selector.battery_identity.options.{identity}"
+        ]
+    for choice in ("without_battery", "with_battery"):
+        assert selectors[
+            f"component.{DOMAIN}.selector.battery_present.options.{choice}"
+        ]

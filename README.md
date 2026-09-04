@@ -2,10 +2,11 @@
 
 CO2 Saver wird eine Home-Assistant-Custom-Integration, die nachvollziehbar berechnet, wie viele Treibhausgasemissionen durch selbst erzeugten und selbst verbrauchten PV-Strom vermieden werden.
 
-> **Status:** Frühe Entwicklungsphase. Der Config Flow kann die Messtopologie
-> und ihre PV-/Netzquellen als unverbindlichen Entwurf prüfen. Er endet bewusst
-> vor der noch ausstehenden Speicherkonfiguration: Es gibt noch keine fertig
-> konfigurierbare Anlage, laufende Messauswertung oder CO₂-Buchung.
+> **Status:** Frühe Entwicklungsphase. Der Config Flow kann Messtopologie,
+> PV-/Netzquellen und einen optionalen Stromspeicher als unverbindlichen Entwurf
+> prüfen. Er endet bewusst vor der noch ausstehenden Verbraucherkonfiguration:
+> Es gibt noch keine fertig konfigurierbare Anlage, laufende Messauswertung oder
+> CO₂-Buchung.
 
 ## Zielbild
 
@@ -24,8 +25,9 @@ Direkt genutzter PV-Strom kann beim Verbrauch bilanziert werden. In einen Speich
 
 ## Aktueller Konfigurationsstand
 
-Der erste Abschnitt des zusammenhängenden UI-Config-Flows ist umgesetzt. Er
-erfasst genau eine der beiden Messtopologien und zeigt nur deren Quellenfelder:
+Die ersten beiden Abschnitte des zusammenhängenden UI-Config-Flows sind
+umgesetzt. Zuerst erfasst der Flow genau eine der beiden Messtopologien und
+zeigt nur deren Quellenfelder:
 
 | Topologie | Pflichtquellen | Optionale Quelle |
 | --- | --- | --- |
@@ -49,12 +51,46 @@ nicht aus. Der Flow verlangt die ausdrückliche Bestätigung dieses
 Synchronitätsvertrags. Ein konkretes MQTT-Referenzmuster steht im
 [Mess- und CO₂-Bilanzierungsvertrag](docs/decisions/0001-accounting-and-input-contract.md#21-konkreter-synchroner-quellpfad).
 
-Nach einer gültigen Quellenauswahl zeigt der Flow lediglich den Platzhalter für
-die in Issue #6 folgende Speicherkonfiguration. Bis die Schritte #6 bis #8
-vollständig umgesetzt sind, erzeugt er weder Config Entry noch Store, Listener,
-Polling-Runner oder Bilanzbuchung. Auch eine Rekonfiguration bleibt bis zum
-späteren Abschluss des gesamten Flows ein Entwurf; vorhandener Store-Locator,
-historische Summen und die aktive Konfiguration bleiben unverändert.
+Im zweiten Abschnitt muss ausdrücklich angegeben werden, ob ein Stromspeicher
+vorhanden ist; für eine neue Einrichtung gibt es keine stillschweigende
+Vorauswahl. Bei einem Speicher verlangt der Flow:
+
+- einen kumulativen Zähler für die AC-Energie am Speichereingang beim Laden,
+- einen getrennten kumulativen Zähler für die AC-Energie am Speicherausgang beim
+  Entladen,
+- die nutzbare, am AC-Ausgang abgebbare Kapazität von `0.1` bis `1000 kWh` ohne
+  Standardwert,
+- einen sichtbar bestätigten AC-Rundtrip-Wirkungsgrad von mehr als `0` bis
+  einschließlich `100 %`; die UI schlägt `90 %` vor.
+
+Lade- und Entladezähler müssen verschiedene Entities sein und gemeinsam mit
+allen zuvor gewählten PV-/Netzrollen denselben oben beschriebenen Quellen- und
+Synchronitätsvertrag erfüllen. Insbesondere müssen sie exakt dasselbe echte
+physische `co2saver_period_end` liefern. Kapazität und Wirkungsgrad werden an
+der UI-Grenze direkt als rohe Dezimaltexte geprüft und anschließend exakt
+kanonisiert; binäre Gleitkommawerte werden nicht übernommen. Es gilt der
+Dezimalpunkt; Komma, Exponentialschreibweise sowie führende oder nachgestellte
+Leerzeichen werden abgelehnt.
+
+Wird bei der Rekonfiguration eines vorhandenen Speichers weiterhin ein Speicher
+konfiguriert, muss zusätzlich ausgewählt werden, ob es sich um denselben
+physischen Speicher handelt oder ob er ersetzt wurde. Einen Austausch hinter
+unveränderten Zähler-Entities kann CO2 Saver nicht automatisch erkennen.
+Derselbe Speicher behält seine interne Identität; beim erstmaligen Hinzufügen
+oder ausdrücklich bestätigten Austausch erzeugt der Flow genau einmal eine neue
+Identität im Entwurf. Diese Auswahl ist kein dauerhaft gespeichertes
+Austauschmerkmal. Wenn der vollständige Flow in Issue #8 später abgeschlossen
+wird, wirkt jede fachliche Änderung nur prospektiv über einen neuen
+vollständigen Segmentfingerabdruck und einen konservativ quarantänisierten
+Speicherbestand; historische Summen werden nicht neu berechnet.
+
+Eine gültige Auswahl mit oder ohne Speicher erreicht lediglich den Platzhalter
+für die in Issue #7 folgende Verbraucherkonfiguration. Bis die Schritte #7 und
+#8 vollständig umgesetzt sind, erzeugt der Flow keinen Config Entry, keinen
+Store, keinen Speicherherkunftsledger, keinen Listener, keinen Polling-Runner und
+keine Bilanzbuchung. Auch eine Rekonfiguration bleibt bis zum späteren Abschluss
+des gesamten Flows ein Entwurf; vorhandener Store-Locator, historische Summen
+und die aktive Konfiguration bleiben unverändert.
 
 ## Eingabemodelle
 
@@ -89,11 +125,12 @@ bereit. Der Store erhält den Codec für den vollständigen Zustand und speicher
 Messbaseline und spätere Bilanzwerte gemeinsam in einer verifizierten
 Transaktion. Er initialisiert einen fehlenden Zustand nur nach ausdrücklich
 bestätigter physischer Abwesenheit; ein leeres Ladeergebnis genügt dafür nicht.
-Der erste UI-Schritt für Topologie und PV-/Netzquellen nutzt diesen Vertrag
-bereits zur aktuellen Validierung, hält seinen Zustand aber absichtlich nur als
-Flow-Entwurf. Die restliche Konfiguration folgt in den Issues #6 bis #8, die
-atomare Aktivierung des Runners ohne Speicher in #9 und mit Speicherbilanz in
-#10. Ergebnis-Entities folgen in den dafür vorgesehenen Roadmap-Issues.
+Die ersten beiden UI-Schritte für Topologie, PV-/Netzquellen und einen optionalen
+Speicher nutzen diesen Vertrag bereits zur aktuellen Validierung, halten ihren
+Zustand aber absichtlich nur als Flow-Entwurf. Die restliche Konfiguration folgt
+in den Issues #7 und #8, die atomare Aktivierung des Runners ohne Speicher in #9
+und mit Speicherbilanz in #10. Ergebnis-Entities folgen in den dafür
+vorgesehenen Roadmap-Issues.
 
 ## Entwicklung
 

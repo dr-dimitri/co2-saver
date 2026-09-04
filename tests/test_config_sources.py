@@ -188,6 +188,16 @@ def test_energy_selector_keeps_an_empty_match_none_whitelist(
     assert energy_entity_selector(hass).config["include_entities"] == []
 
 
+@pytest.mark.parametrize("state_class", [[], {}, ["total"], 1, None])
+def test_energy_selector_ignores_malformed_state_classes(
+    hass: HomeAssistant, state_class: object
+) -> None:
+    """An unrelated malformed registry sensor must not crash every energy form."""
+    entry = _register_source(hass, "malformed")
+    _publish_energy_state(hass, entry.entity_id, state_class=state_class)
+    assert energy_entity_selector(hass).config["include_entities"] == []
+
+
 def test_valid_inverter_selection_is_canonical_and_serializable(
     hass: HomeAssistant,
 ) -> None:
@@ -359,6 +369,8 @@ def test_duplicate_registry_ownership_marks_every_affected_role(
     [
         ({ATTR_DEVICE_CLASS: "power"}, "invalid_device_class"),
         ({ATTR_STATE_CLASS: "measurement"}, "invalid_state_class"),
+        ({ATTR_STATE_CLASS: []}, "invalid_state_class"),
+        ({ATTR_STATE_CLASS: {}}, "invalid_state_class"),
         ({ATTR_UNIT_OF_MEASUREMENT: "J"}, "invalid_unit"),
         ({ATTR_CO2SAVER_PERIOD_END: "not-a-timestamp"}, "invalid_period_end"),
         ({ATTR_CO2SAVER_PERIOD_END: "2026-09-05T11:59:00"}, "invalid_period_end"),
