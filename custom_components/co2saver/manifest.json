@@ -1,0 +1,12 @@
+{
+  "domain": "co2saver",
+  "name": "CO2 Saver",
+  "codeowners": ["@dr-dimitri"],
+  "dependencies": [],
+  "documentation": "https://github.com/dr-dimitri/co-saver#readme",
+  "integration_type": "helper",
+  "iot_class": "calculated",
+  "issue_tracker": "https://github.com/dr-dimitri/co-saver/issues",
+  "requirements": [],
+  "version": "0.0.0"
+}
