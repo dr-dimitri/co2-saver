@@ -26,7 +26,7 @@ Die geplante Konfiguration unterstützt zwei klar getrennte Verbrauchsmodelle:
 1. Ein aggregierter Verbrauchssensor enthält Haus und zusätzliche Verbraucher. Zusätzliche Verbraucher können daraus über definierte Anteile zugeordnet werden; die Summe bleibt auf den gemessenen Gesamtverbrauch begrenzt.
 2. Haus und zusätzliche Verbraucher werden mit separaten, nicht überlappenden Sensoren erfasst.
 
-Offene Festlegungen zu Messwerttypen, Emissionsfaktoren, Speicherherkunft, Verlusten und Zeitbezug werden im ersten Roadmap-Issue entschieden, bevor davon abhängige Implementierung beginnt.
+Die Festlegungen zu Messwerttypen, Emissionsfaktoren, Speicherherkunft, Verlusten und Zeitbezug stehen im angenommenen [Mess- und CO₂-Bilanzierungsvertrag](docs/decisions/0001-accounting-and-input-contract.md). Abhängige Implementierung muss diesen Vertrag einhalten.
 
 ## Entwicklung
 
