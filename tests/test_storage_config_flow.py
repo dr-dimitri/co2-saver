@@ -281,9 +281,10 @@ async def test_explicit_no_battery_reaches_consumers_without_side_effects(
     assert flow.configuration_draft["battery"] is None
     assert flow.battery_change_pending is False
     assert not hass.config_entries.async_entries(DOMAIN)
-    retry = await hass.config_entries.flow.async_configure(result["flow_id"], {})
-    assert retry["errors"] == {"base": "setup_incomplete"}
-    hass.config_entries.flow.async_abort(retry["flow_id"])
+    with pytest.raises(InvalidData) as error:
+        await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    assert error.value.path == ["mode"]
+    hass.config_entries.flow.async_abort(result["flow_id"])
 
 
 @pytest.mark.parametrize("topology", ["inverter", "smart_meter"])

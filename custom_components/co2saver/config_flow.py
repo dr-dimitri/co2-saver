@@ -11,12 +11,11 @@ from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
 import voluptuous as vol
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.core import valid_entity_id
+from homeassistant.config_entries import ConfigFlow, ConfigFlowResult, OptionsFlow
+from homeassistant.core import callback
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.selector import (
     BooleanSelector,
-    EntitySelector,
     SelectSelector,
     SelectSelectorConfig,
     SelectSelectorMode,
@@ -26,15 +25,17 @@ from homeassistant.helpers.selector import (
 )
 
 from .config_sources import (
-    energy_entity_selector,
     source_fields,
     validate_source_selection,
 )
 from .config_storage import validate_storage_selection
 from .const import DOMAIN
+from .consumer_flow import ConsumerFlowSteps
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
+
+    from homeassistant.config_entries import ConfigEntry
 
 _TOPOLOGIES = ("inverter", "smart_meter")
 _BATTERY_ROLES = ("battery_charge", "battery_discharge")
@@ -42,21 +43,23 @@ _BATTERY_IDENTITIES = ("same_physical_battery", "physical_battery_replaced")
 _BATTERY_CHOICES = ("without_battery", "with_battery")
 
 
-class Co2SaverConfigFlow(ConfigFlow, domain=DOMAIN):
+class Co2SaverConfigFlow(ConsumerFlowSteps, ConfigFlow, domain=DOMAIN):
     """Collect an isolated draft without committing intermediate configuration."""
 
     VERSION = 1
 
     def __init__(self) -> None:
         """Keep all incomplete configuration private to this flow."""
-        self._draft: dict[str, Any] = {}
+        super().__init__()
         self._original_battery: dict[str, Any] | None = None
         self._new_battery_id: str | None = None
 
-    @property
-    def configuration_draft(self) -> dict[str, Any]:
-        """Return a detached, serializable snapshot of the staged configuration."""
-        return deepcopy(self._draft)
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry: ConfigEntry) -> OptionsFlow:
+        """Expose the same staged consumer editor without committing options."""
+        _ = config_entry
+        return Co2SaverOptionsFlow()
 
     @property
     def battery_change_pending(self) -> bool:
@@ -148,29 +151,6 @@ class Co2SaverConfigFlow(ConfigFlow, domain=DOMAIN):
             errors=errors,
             last_step=False,
         )
-
-    def _energy_selector_with_suggestions(
-        self, roles: tuple[str, ...], suggestions: dict[str, Any]
-    ) -> EntitySelector:
-        """Keep corrected sources retryable for both source-selection steps."""
-        registry = er.async_get(self.hass)
-        for role in roles:
-            value = suggestions.get(role)
-            if isinstance(value, str) and (entry := registry.async_get(value)):
-                suggestions[role] = entry.entity_id
-        selector = energy_entity_selector(self.hass)
-        # Keep the submitted selection retryable if its semantics changed after
-        # the first form. The backend still validates every role on every submit.
-        selected_entities = {
-            value
-            for role in roles
-            if isinstance(value := suggestions.get(role), str)
-            and valid_entity_id(value)
-        }
-        selector.config["include_entities"] = sorted(
-            set(selector.config.get("include_entities", ())) | selected_entities
-        )
-        return selector
 
     def _source_suggestions(self, topology: str) -> dict[str, object]:
         """Resolve old registry identities to current UI names, never persist them."""
@@ -318,13 +298,14 @@ class Co2SaverConfigFlow(ConfigFlow, domain=DOMAIN):
             "round_trip_efficiency_percent": percent,
         }
 
-    async def async_step_consumers(
+
+class Co2SaverOptionsFlow(ConsumerFlowSteps, OptionsFlow):
+    """Prepare consumer/factor edits while preserving original data and options."""
+
+    async def async_step_init(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Expose the next boundary; issue #7 supplies the consumer configuration."""
-        return self.async_show_form(
-            step_id="consumers",
-            data_schema=vol.Schema({}),
-            errors={"base": "setup_incomplete"} if user_input is not None else {},
-            last_step=False,
-        )
+        """Read the authoritative data only; never overlay opaque options."""
+        if not self._draft:
+            self._draft = deepcopy(dict(self.config_entry.data))
+        return await self.async_step_consumers(user_input)

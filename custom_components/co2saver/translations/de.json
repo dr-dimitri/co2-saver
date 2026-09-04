@@ -7,16 +7,24 @@
       "battery_confirmation_required": "Bestätige die korrekten Richtungen der Lade- und Entladequellen sowie den gemeinsamen Synchronitätsvertrag.",
       "capacity_out_of_range": "Gib eine nutzbare Ausgangskapazität von 0.1 bis 1000 kWh ein.",
       "confirmation_required": "Bestätige, dass alle ausgewählten Quellen den Vertrag für synchronisierte physische Messungen erfüllen.",
+      "consumer_confirmation_required": "Bestätige, dass dieser Verbraucher einen eigenen, nicht überlappenden Lastzähler besitzt und den gemeinsamen Synchronitätsvertrag erfüllt.",
+      "consumer_not_found": "Der ausgewählte zusätzliche Verbraucher ist in diesem Entwurf nicht mehr vorhanden.",
+      "duplicate_consumer_id": "Der Verbraucherentwurf enthält eine doppelte interne Verbraucheridentität. Brich diesen Entwurf ab und starte die Konfiguration neu.",
       "duplicate_source": "Jede Messrolle muss eine andere Quell-Entity verwenden.",
       "efficiency_out_of_range": "Gib einen AC-Rundtrip-Wirkungsgrad von mehr als 0 bis höchstens 100 % ein.",
       "future_last_reported": "Home Assistant meldet für diese Quelle einen Veröffentlichungszeitpunkt in der Zukunft.",
       "future_period_end": "Das Ende der physischen Messperiode liegt in der Zukunft.",
       "invalid_battery_choice": "Wähle ausdrücklich aus, ob diese Anlage einen Stromspeicher besitzt.",
       "invalid_battery_identity": "Wähle aus, ob dies derselbe physische Speicher oder ein Ersatzspeicher ist.",
+      "invalid_consumer_action": "Wähle aus, ob du einen zusätzlichen Verbraucher hinzufügen, bearbeiten oder entfernen oder die Verbraucherkonfiguration abschließen möchtest.",
+      "invalid_consumer_id": "Der Verbraucherentwurf enthält eine ungültige interne Verbraucheridentität. Brich diesen Entwurf ab und starte die Konfiguration neu.",
+      "invalid_consumer_plan": "Der Verbraucherentwurf ist widersprüchlich. Brich diesen Entwurf ab und starte die Konfiguration neu.",
+      "invalid_consumption_mode": "Wähle einen der unterstützten Messmodi für den lokalen Verbrauch aus.",
       "invalid_decimal_separator": "Verwende einen Punkt (.) als Dezimaltrennzeichen; ein Komma wird nicht akzeptiert.",
       "invalid_device_class": "Die ausgewählte Quelle muss die Geräteklasse energy besitzen.",
       "invalid_domain": "Die ausgewählte Quelle muss eine sensor-Entity sein.",
       "invalid_last_reported": "Home Assistant stellt für diese Quelle keinen gültigen Veröffentlichungszeitpunkt (last_reported) bereit.",
+      "invalid_name": "Gib einen nicht leeren Namen für den zusätzlichen Verbraucher ein.",
       "invalid_number": "Gib eine einfache Dezimalzahl ohne Leerzeichen oder Exponentialschreibweise ein.",
       "invalid_period_end": "Die ausgewählte Quelle muss im State-Attribut co2saver_period_end einen gültigen UTC-Zeitstempel bereitstellen.",
       "invalid_selection": "Wähle eine gültige Quell-Entity aus.",
@@ -26,11 +34,15 @@
       "invalid_topology": "Wähle eine der unterstützten Messtopologien aus.",
       "invalid_unit": "Die ausgewählte Quelle muss Wh, kWh oder MWh verwenden.",
       "invalid_value": "Die ausgewählte Quelle muss aktuell einen endlichen, nichtnegativen kumulativen Energiewert liefern.",
+      "load_confirmation_required": "Bestätige den Umfang dieses Lastzählers und den gemeinsamen Synchronitätsvertrag.",
       "period_after_publication": "Das Ende der physischen Messperiode darf nicht nach dem Home-Assistant-Veröffentlichungszeitpunkt liegen.",
       "publication_delay": "Die Quelle wurde mehr als 60 Sekunden nach Ende ihrer physischen Messperiode veröffentlicht.",
       "publication_skew": "Die ausgewählten Rollen wurden mit mehr als 60 Sekunden Abstand veröffentlicht.",
+      "removal_confirmation_required": "Bestätige, dass der ausgewählte zusätzliche Verbraucher aus diesem Entwurf entfernt werden soll.",
       "required": "Dieses Feld ist erforderlich.",
-      "setup_incomplete": "Die Einrichtung kann noch nicht abgeschlossen werden. Die Verbraucherkonfiguration ist der nächste Entwicklungsschritt in Issue #7; es wurde keine Konfiguration gespeichert.",
+      "setup_incomplete": "Die Einrichtung kann noch nicht abgeschlossen werden. Die Faktor- und CO2-Quellenkonfiguration ist der nächste Entwicklungsschritt in Issue #8; es wurde keine Konfiguration gespeichert.",
+      "share_out_of_range": "Gib einen Anteil von 0 bis 100 % ein.",
+      "shares_exceed_total": "Die Anteile aller zusätzlichen Verbraucher dürfen zusammen höchstens 100 % betragen; der Rest gehört zum Haushalt.",
       "source_disabled": "Die ausgewählte Quelle ist in der Entity Registry deaktiviert.",
       "source_missing": "Die ausgewählte Quelle hat keinen aktuellen Home-Assistant-Zustand.",
       "source_not_registered": "Die ausgewählte Quelle benötigt einen Eintrag in der Entity Registry.",
@@ -40,10 +52,96 @@
       "unexpected_field": "Dieses Feld ist im aktuellen Konfigurationsschritt nicht zulässig."
     },
     "step": {
+      "aggregate_load": {
+        "data": {
+          "household_source": "Zähler für gesamten lokalen Verbrauch",
+          "load_measurement_confirmed": "Ich bestätige den gesamten lokalen Messumfang und den Synchronitätsvertrag"
+        },
+        "data_description": {
+          "household_source": "Kumulative Energie für Haushalt und alle zusätzlichen Verbraucher zusammen. Speicherladung und Netzeinspeisung müssen ausgeschlossen sein.",
+          "load_measurement_confirmed": "Bestätige, dass dieser Zähler den gesamten lokalen Verbrauch erfasst, Speicherladung und Netzeinspeisung ausschließt und aus derselben atomaren physischen Erfassung wie alle zuvor ausgewählten Energierollen stammt."
+        },
+        "description": "Wähle den kumulativen Zähler für den gesamten lokalen Verbrauch. Für ihn gelten dieselben Anforderungen an registrierte und aktive sensor-Entities, Geräteklasse energy, Zustandsklasse total oder total_increasing sowie Wh/kWh/MWh wie für die bisherigen Quellen. Er muss exakt dasselbe autoritative co2saver_period_end ausweisen, mindestens alle fünf Minuten neu gemessen werden und die 60-Sekunden-Veröffentlichungsgrenzen erfüllen. Entity-Namen beweisen den physischen Umfang nicht, daher ist eine ausdrückliche Bestätigung erforderlich.",
+        "title": "Gesamten lokalen Verbrauch konfigurieren"
+      },
+      "consumer_add": {
+        "data": {
+          "consumer_measurement_confirmed": "Ich bestätige, dass dieser separate Verbrauchszähler nicht überlappt und synchronisiert ist",
+          "name": "Name",
+          "share_percent": "Anteil am gesamten lokalen Verbrauch",
+          "source": "Separater Verbrauchszähler"
+        },
+        "data_description": {
+          "consumer_measurement_confirmed": "Bestätige, dass dieser Zähler nur diesen Verbraucher erfasst, weder Haushalt noch andere Verbraucher überlappt, Speicherladung und Netzeinspeisung ausschließt und dieselbe exakte physische Messperiode wie alle anderen Energierollen verwendet.",
+          "name": "Ein Anzeigename für diesen zusätzlichen Verbraucher; die Bilanzidentität hängt nicht vom Namen ab.",
+          "share_percent": "Gib eine exakte einfache Dezimalzahl von 0 bis 100 mit Punkt ein. Die Anteile aller zusätzlichen Verbraucher dürfen zusammen 100 % nicht überschreiten; der Rest gehört zum Haushalt.",
+          "source": "Ein registrierter und aktiver kumulativer Energiesensor, der nur diesen zusätzlichen Verbraucher misst und den vollständigen gemeinsamen Quellenvertrag erfüllt."
+        },
+        "description": "Füge mit den Feldern des gewählten Verbrauchsmodus einen optionalen Verbraucher hinzu. Im Anteilsmodus wird ein Prozentanteil der gemessenen lokalen Energie zugeordnet; dieser Anteil zerlegt nur Energie und verteilt die systemweite CO2-Ersparnis nicht proportional. Der Modus mit separaten Zählern verlangt eine eigene, nicht überlappende kumulative Quelle und die ausdrückliche Bestätigung ihres physischen Umfangs. Im Entwurf wird eine stabile interne Identität erzeugt.",
+        "title": "Zusätzlichen Verbraucher hinzufügen"
+      },
+      "consumer_edit": {
+        "data": {
+          "consumer_id": "Zusätzlicher Verbraucher"
+        },
+        "data_description": {
+          "consumer_id": "Wähle den Verbraucher aus, der umbenannt oder neu zugeordnet werden soll. Seine stabile interne Identität bleibt erhalten."
+        },
+        "description": "Wähle einen vorhandenen zusätzlichen Verbraucher aus dem aktuellen Entwurf. Das Bearbeiten von Name oder Zuordnung erhält dieselbe stabile Identität und künftige Zeitreihe.",
+        "title": "Zu bearbeitenden Verbraucher auswählen"
+      },
+      "consumer_edit_details": {
+        "data": {
+          "consumer_measurement_confirmed": "Ich bestätige, dass dieser separate Verbrauchszähler nicht überlappt und synchronisiert ist",
+          "name": "Name",
+          "share_percent": "Anteil am gesamten lokalen Verbrauch",
+          "source": "Separater Verbrauchszähler"
+        },
+        "data_description": {
+          "consumer_measurement_confirmed": "Bestätige, dass dieser Zähler nur diesen Verbraucher erfasst, weder Haushalt noch andere Verbraucher überlappt, Speicherladung und Netzeinspeisung ausschließt und dieselbe exakte physische Messperiode wie alle anderen Energierollen verwendet.",
+          "name": "Eine Änderung des Anzeigenamens erhält die stabile interne Identität dieses Verbrauchers.",
+          "share_percent": "Gib eine exakte einfache Dezimalzahl von 0 bis 100 mit Punkt ein. Die Anteile aller zusätzlichen Verbraucher dürfen zusammen 100 % nicht überschreiten; der Rest gehört zum Haushalt.",
+          "source": "Ein registrierter und aktiver kumulativer Energiesensor, der nur diesen zusätzlichen Verbraucher misst und den vollständigen gemeinsamen Quellenvertrag erfüllt."
+        },
+        "description": "Aktualisiere den ausgewählten Verbraucher mit den Feldern des aktuellen Modus. Anteile zerlegen nur die gemessene Energie, nicht die systemweite CO2-Ersparnis. Eine separate Quelle muss physisch überschneidungsfrei und synchronisiert sein. Die stabile interne Identität des Verbrauchers bleibt erhalten.",
+        "title": "Zusätzlichen Verbraucher bearbeiten"
+      },
+      "consumer_menu": {
+        "data": {
+          "action": "Aktion"
+        },
+        "data_description": {
+          "action": "Füge einen zusätzlichen Verbraucher hinzu, bearbeite oder entferne ihn oder schließe diesen Verbraucherentwurf ab. Ein Abschluss ohne zusätzliche Verbraucher ist zulässig."
+        },
+        "description": "Aktuelle zusätzliche Verbraucher:\n\n{consumer_summary}\n\nWähle die nächste Aktion. Prozentanteile zerlegen nur die gemessene lokale Energie; sie weisen die garantierte systemweite CO2-Ersparnis nicht proportional zu.",
+        "title": "Zusätzliche Verbraucher"
+      },
+      "consumer_remove": {
+        "data": {
+          "confirm_removal": "Ich bestätige die Entfernung aus diesem Verbraucherentwurf",
+          "consumer_id": "Zusätzlicher Verbraucher"
+        },
+        "data_description": {
+          "confirm_removal": "Die Entfernung wird jetzt nur vorgemerkt. Wenn der vollständige Flow in Issue #8 abgeschlossen wird, endet die Zeitreihe dieses Verbrauchers; späteres Hinzufügen desselben Namens erzeugt eine neue stabile Identität.",
+          "consumer_id": "Wähle den zusätzlichen Verbraucher aus, der aus dem Entwurf entfernt werden soll."
+        },
+        "description": "Entferne einen Verbraucher aus dem Entwurf. Die aktive Konfiguration und alle historischen Werte bleiben unverändert, solange dieser Flow nicht abgeschlossen ist.",
+        "title": "Zusätzlichen Verbraucher entfernen"
+      },
       "consumers": {
+        "data": {
+          "mode": "Messung des lokalen Verbrauchs"
+        },
+        "data_description": {
+          "mode": "Verwende einen Zähler für den gesamten lokalen Verbrauch mit Prozentanteilen oder getrennte, nicht überlappende Zähler für Haushalt und jeden zusätzlichen Verbraucher."
+        },
+        "description": "Wähle genau ein Verbrauchsmodell. Die Gesamtmessung mit Anteilen verwendet einen kumulativen Zähler für Haushalt und zusätzliche Verbraucher; konfigurierte Anteile zerlegen diese gemessene Energie und der Rest gehört zum Haushalt. Separate Zähler verwenden eine reine Haushaltsquelle und je eine Quelle pro zusätzlichem Verbraucher. Ein Moduswechsel erhält stabile Verbraucheridentitäten und Namen, löscht aber Haushaltsquelle und inkompatible Zuordnungen, sodass sie neu eingegeben werden müssen; historische Werte bleiben unverändert. Dies bleibt ein unverbindlicher Entwurf.",
+        "title": "Messung des lokalen Verbrauchs auswählen"
+      },
+      "factors": {
         "data": {},
-        "description": "Der Entwurf für Messung und Stromspeicher ist gültig. Die Verbraucherkonfiguration ist der nächste Entwicklungsschritt in Issue #7. Die Einrichtung kann noch nicht abgeschlossen werden. Sie erzeugt keinen Config Entry, keinen Store, keinen Speicherherkunftsledger, keinen Listener, keinen Polling-Runner und keine Bilanzbuchung.",
-        "title": "Verbraucher konfigurieren"
+        "description": "Der Entwurf für Messung, Stromspeicher und Verbraucher ist gültig. Die Faktor- und CO2-Quellenkonfiguration ist der nächste Entwicklungsschritt in Issue #8. Die Einrichtung kann noch nicht abgeschlossen werden. Sie erzeugt keinen Config Entry, keinen Store, keinen Speicherherkunftsledger, keinen Listener, keinen Polling-Runner und keine Bilanzbuchung.",
+        "title": "Bilanzfaktoren konfigurieren"
       },
       "reconfigure": {
         "data": {
@@ -54,6 +152,18 @@
         },
         "description": "Wähle die Topologie für den vorgeschlagenen Quellenwechsel. Die Auswahl bleibt ein Entwurf: Vorhandene Konfiguration, Store-Locator und historische Summen bleiben unverändert, bis der vollständige Rekonfigurations-Flow in seinem letzten Schritt bestätigt werden kann.",
         "title": "Messtopologie ändern"
+      },
+      "separate_load": {
+        "data": {
+          "household_source": "Zähler nur für Haushaltsverbrauch",
+          "load_measurement_confirmed": "Ich bestätige den reinen Haushaltsumfang und den Synchronitätsvertrag"
+        },
+        "data_description": {
+          "household_source": "Kumulative Energie ausschließlich für den Haushaltsverbrauch. Alle zusätzlichen Verbraucher, Speicherladung und Netzeinspeisung müssen ausgeschlossen sein.",
+          "load_measurement_confirmed": "Bestätige, dass dieser Zähler nur den Haushalt erfasst, keinen zusätzlichen Verbraucher überlappt, Speicherladung und Netzeinspeisung ausschließt und aus derselben atomaren physischen Erfassung wie alle zuvor ausgewählten Energierollen stammt."
+        },
+        "description": "Wähle den kumulativen reinen Haushaltszähler. Für ihn gelten dieselben Anforderungen an registrierte und aktive sensor-Entities, Geräteklasse energy, Zustandsklasse total oder total_increasing sowie Wh/kWh/MWh wie für die bisherigen Quellen. Er muss exakt dasselbe autoritative co2saver_period_end ausweisen, mindestens alle fünf Minuten neu gemessen werden und die 60-Sekunden-Veröffentlichungsgrenzen erfüllen. Entity-Namen beweisen die Überschneidungsfreiheit nicht, daher ist eine ausdrückliche Bestätigung erforderlich.",
+        "title": "Haushaltsverbrauch konfigurieren"
       },
       "sources": {
         "data": {
@@ -115,6 +225,161 @@
       }
     }
   },
+  "options": {
+    "error": {
+      "battery_confirmation_required": "Bestätige die korrekten Richtungen der Lade- und Entladequellen sowie den gemeinsamen Synchronitätsvertrag.",
+      "capacity_out_of_range": "Gib eine nutzbare Ausgangskapazität von 0.1 bis 1000 kWh ein.",
+      "confirmation_required": "Bestätige, dass alle ausgewählten Quellen den Vertrag für synchronisierte physische Messungen erfüllen.",
+      "consumer_confirmation_required": "Bestätige, dass dieser Verbraucher einen eigenen, nicht überlappenden Lastzähler besitzt und den gemeinsamen Synchronitätsvertrag erfüllt.",
+      "consumer_not_found": "Der ausgewählte zusätzliche Verbraucher ist in diesem Entwurf nicht mehr vorhanden.",
+      "duplicate_consumer_id": "Der Verbraucherentwurf enthält eine doppelte interne Verbraucheridentität. Brich diesen Entwurf ab und starte die Konfiguration neu.",
+      "duplicate_source": "Jede Messrolle muss eine andere Quell-Entity verwenden.",
+      "efficiency_out_of_range": "Gib einen AC-Rundtrip-Wirkungsgrad von mehr als 0 bis höchstens 100 % ein.",
+      "future_last_reported": "Home Assistant meldet für diese Quelle einen Veröffentlichungszeitpunkt in der Zukunft.",
+      "future_period_end": "Das Ende der physischen Messperiode liegt in der Zukunft.",
+      "invalid_battery_choice": "Wähle ausdrücklich aus, ob diese Anlage einen Stromspeicher besitzt.",
+      "invalid_battery_identity": "Wähle aus, ob dies derselbe physische Speicher oder ein Ersatzspeicher ist.",
+      "invalid_consumer_action": "Wähle aus, ob du einen zusätzlichen Verbraucher hinzufügen, bearbeiten oder entfernen oder die Verbraucherkonfiguration abschließen möchtest.",
+      "invalid_consumer_id": "Der Verbraucherentwurf enthält eine ungültige interne Verbraucheridentität. Brich diesen Entwurf ab und starte die Konfiguration neu.",
+      "invalid_consumer_plan": "Der Verbraucherentwurf ist widersprüchlich. Brich diesen Entwurf ab und starte die Konfiguration neu.",
+      "invalid_consumption_mode": "Wähle einen der unterstützten Messmodi für den lokalen Verbrauch aus.",
+      "invalid_decimal_separator": "Verwende einen Punkt (.) als Dezimaltrennzeichen; ein Komma wird nicht akzeptiert.",
+      "invalid_device_class": "Die ausgewählte Quelle muss die Geräteklasse energy besitzen.",
+      "invalid_domain": "Die ausgewählte Quelle muss eine sensor-Entity sein.",
+      "invalid_last_reported": "Home Assistant stellt für diese Quelle keinen gültigen Veröffentlichungszeitpunkt (last_reported) bereit.",
+      "invalid_name": "Gib einen nicht leeren Namen für den zusätzlichen Verbraucher ein.",
+      "invalid_number": "Gib eine einfache Dezimalzahl ohne Leerzeichen oder Exponentialschreibweise ein.",
+      "invalid_period_end": "Die ausgewählte Quelle muss im State-Attribut co2saver_period_end einen gültigen UTC-Zeitstempel bereitstellen.",
+      "invalid_selection": "Wähle eine gültige Quell-Entity aus.",
+      "invalid_source": "Die ausgewählte Quelle erfüllt den Vertrag für kumulative Energiequellen nicht.",
+      "invalid_source_vector": "Die ausgewählten Energiequellen bilden keine vollständige, gültige und synchronisierte Messung. Korrigiere ihre Zustände und versuche es erneut. Um eine in einem früheren Schritt ausgewählte Quelle zu ändern, brich diesen Entwurf ab und starte die Konfiguration neu.",
+      "invalid_state_class": "Die ausgewählte Quelle muss die Zustandsklasse total oder total_increasing besitzen.",
+      "invalid_topology": "Wähle eine der unterstützten Messtopologien aus.",
+      "invalid_unit": "Die ausgewählte Quelle muss Wh, kWh oder MWh verwenden.",
+      "invalid_value": "Die ausgewählte Quelle muss aktuell einen endlichen, nichtnegativen kumulativen Energiewert liefern.",
+      "load_confirmation_required": "Bestätige den Umfang dieses Lastzählers und den gemeinsamen Synchronitätsvertrag.",
+      "period_after_publication": "Das Ende der physischen Messperiode darf nicht nach dem Home-Assistant-Veröffentlichungszeitpunkt liegen.",
+      "publication_delay": "Die Quelle wurde mehr als 60 Sekunden nach Ende ihrer physischen Messperiode veröffentlicht.",
+      "publication_skew": "Die ausgewählten Rollen wurden mit mehr als 60 Sekunden Abstand veröffentlicht.",
+      "removal_confirmation_required": "Bestätige, dass der ausgewählte zusätzliche Verbraucher aus diesem Entwurf entfernt werden soll.",
+      "required": "Dieses Feld ist erforderlich.",
+      "setup_incomplete": "Die Einrichtung kann noch nicht abgeschlossen werden. Die Faktor- und CO2-Quellenkonfiguration ist der nächste Entwicklungsschritt in Issue #8; es wurde keine Konfiguration gespeichert.",
+      "share_out_of_range": "Gib einen Anteil von 0 bis 100 % ein.",
+      "shares_exceed_total": "Die Anteile aller zusätzlichen Verbraucher dürfen zusammen höchstens 100 % betragen; der Rest gehört zum Haushalt.",
+      "source_disabled": "Die ausgewählte Quelle ist in der Entity Registry deaktiviert.",
+      "source_missing": "Die ausgewählte Quelle hat keinen aktuellen Home-Assistant-Zustand.",
+      "source_not_registered": "Die ausgewählte Quelle benötigt einen Eintrag in der Entity Registry.",
+      "source_stale": "Die physische Messung der Quelle ist älter als fünf Minuten.",
+      "source_unavailable": "Die ausgewählte Quelle ist derzeit nicht verfügbar oder unbekannt.",
+      "sources_not_synchronized": "Alle ausgewählten Quellen müssen in co2saver_period_end exakt dasselbe Ende der physischen Messperiode ausweisen.",
+      "unexpected_field": "Dieses Feld ist im aktuellen Konfigurationsschritt nicht zulässig."
+    },
+    "step": {
+      "aggregate_load": {
+        "data": {
+          "household_source": "Zähler für gesamten lokalen Verbrauch",
+          "load_measurement_confirmed": "Ich bestätige den gesamten lokalen Messumfang und den Synchronitätsvertrag"
+        },
+        "data_description": {
+          "household_source": "Kumulative Energie für Haushalt und alle zusätzlichen Verbraucher zusammen. Speicherladung und Netzeinspeisung müssen ausgeschlossen sein.",
+          "load_measurement_confirmed": "Bestätige, dass dieser Zähler den gesamten lokalen Verbrauch erfasst, Speicherladung und Netzeinspeisung ausschließt und aus derselben atomaren physischen Erfassung wie alle zuvor ausgewählten Energierollen stammt."
+        },
+        "description": "Wähle den kumulativen Zähler für den gesamten lokalen Verbrauch. Für ihn gelten dieselben Anforderungen an registrierte und aktive sensor-Entities, Geräteklasse energy, Zustandsklasse total oder total_increasing sowie Wh/kWh/MWh wie für die bisherigen Quellen. Er muss exakt dasselbe autoritative co2saver_period_end ausweisen, mindestens alle fünf Minuten neu gemessen werden und die 60-Sekunden-Veröffentlichungsgrenzen erfüllen. Entity-Namen beweisen den physischen Umfang nicht, daher ist eine ausdrückliche Bestätigung erforderlich.",
+        "title": "Gesamten lokalen Verbrauch konfigurieren"
+      },
+      "consumer_add": {
+        "data": {
+          "consumer_measurement_confirmed": "Ich bestätige, dass dieser separate Verbrauchszähler nicht überlappt und synchronisiert ist",
+          "name": "Name",
+          "share_percent": "Anteil am gesamten lokalen Verbrauch",
+          "source": "Separater Verbrauchszähler"
+        },
+        "data_description": {
+          "consumer_measurement_confirmed": "Bestätige, dass dieser Zähler nur diesen Verbraucher erfasst, weder Haushalt noch andere Verbraucher überlappt, Speicherladung und Netzeinspeisung ausschließt und dieselbe exakte physische Messperiode wie alle anderen Energierollen verwendet.",
+          "name": "Ein Anzeigename für diesen zusätzlichen Verbraucher; die Bilanzidentität hängt nicht vom Namen ab.",
+          "share_percent": "Gib eine exakte einfache Dezimalzahl von 0 bis 100 mit Punkt ein. Die Anteile aller zusätzlichen Verbraucher dürfen zusammen 100 % nicht überschreiten; der Rest gehört zum Haushalt.",
+          "source": "Ein registrierter und aktiver kumulativer Energiesensor, der nur diesen zusätzlichen Verbraucher misst und den vollständigen gemeinsamen Quellenvertrag erfüllt."
+        },
+        "description": "Füge mit den Feldern des gewählten Verbrauchsmodus einen optionalen Verbraucher hinzu. Im Anteilsmodus wird ein Prozentanteil der gemessenen lokalen Energie zugeordnet; dieser Anteil zerlegt nur Energie und verteilt die systemweite CO2-Ersparnis nicht proportional. Der Modus mit separaten Zählern verlangt eine eigene, nicht überlappende kumulative Quelle und die ausdrückliche Bestätigung ihres physischen Umfangs. Im Entwurf wird eine stabile interne Identität erzeugt.",
+        "title": "Zusätzlichen Verbraucher hinzufügen"
+      },
+      "consumer_edit": {
+        "data": {
+          "consumer_id": "Zusätzlicher Verbraucher"
+        },
+        "data_description": {
+          "consumer_id": "Wähle den Verbraucher aus, der umbenannt oder neu zugeordnet werden soll. Seine stabile interne Identität bleibt erhalten."
+        },
+        "description": "Wähle einen vorhandenen zusätzlichen Verbraucher aus dem aktuellen Entwurf. Das Bearbeiten von Name oder Zuordnung erhält dieselbe stabile Identität und künftige Zeitreihe.",
+        "title": "Zu bearbeitenden Verbraucher auswählen"
+      },
+      "consumer_edit_details": {
+        "data": {
+          "consumer_measurement_confirmed": "Ich bestätige, dass dieser separate Verbrauchszähler nicht überlappt und synchronisiert ist",
+          "name": "Name",
+          "share_percent": "Anteil am gesamten lokalen Verbrauch",
+          "source": "Separater Verbrauchszähler"
+        },
+        "data_description": {
+          "consumer_measurement_confirmed": "Bestätige, dass dieser Zähler nur diesen Verbraucher erfasst, weder Haushalt noch andere Verbraucher überlappt, Speicherladung und Netzeinspeisung ausschließt und dieselbe exakte physische Messperiode wie alle anderen Energierollen verwendet.",
+          "name": "Eine Änderung des Anzeigenamens erhält die stabile interne Identität dieses Verbrauchers.",
+          "share_percent": "Gib eine exakte einfache Dezimalzahl von 0 bis 100 mit Punkt ein. Die Anteile aller zusätzlichen Verbraucher dürfen zusammen 100 % nicht überschreiten; der Rest gehört zum Haushalt.",
+          "source": "Ein registrierter und aktiver kumulativer Energiesensor, der nur diesen zusätzlichen Verbraucher misst und den vollständigen gemeinsamen Quellenvertrag erfüllt."
+        },
+        "description": "Aktualisiere den ausgewählten Verbraucher mit den Feldern des aktuellen Modus. Anteile zerlegen nur die gemessene Energie, nicht die systemweite CO2-Ersparnis. Eine separate Quelle muss physisch überschneidungsfrei und synchronisiert sein. Die stabile interne Identität des Verbrauchers bleibt erhalten.",
+        "title": "Zusätzlichen Verbraucher bearbeiten"
+      },
+      "consumer_menu": {
+        "data": {
+          "action": "Aktion"
+        },
+        "data_description": {
+          "action": "Füge einen zusätzlichen Verbraucher hinzu, bearbeite oder entferne ihn oder schließe diesen Verbraucherentwurf ab. Ein Abschluss ohne zusätzliche Verbraucher ist zulässig."
+        },
+        "description": "Aktuelle zusätzliche Verbraucher:\n\n{consumer_summary}\n\nWähle die nächste Aktion. Prozentanteile zerlegen nur die gemessene lokale Energie; sie weisen die garantierte systemweite CO2-Ersparnis nicht proportional zu.",
+        "title": "Zusätzliche Verbraucher"
+      },
+      "consumer_remove": {
+        "data": {
+          "confirm_removal": "Ich bestätige die Entfernung aus diesem Verbraucherentwurf",
+          "consumer_id": "Zusätzlicher Verbraucher"
+        },
+        "data_description": {
+          "confirm_removal": "Die Entfernung wird jetzt nur vorgemerkt. Wenn der vollständige Flow in Issue #8 abgeschlossen wird, endet die Zeitreihe dieses Verbrauchers; späteres Hinzufügen desselben Namens erzeugt eine neue stabile Identität.",
+          "consumer_id": "Wähle den zusätzlichen Verbraucher aus, der aus dem Entwurf entfernt werden soll."
+        },
+        "description": "Entferne einen Verbraucher aus dem Entwurf. Die aktive Konfiguration und alle historischen Werte bleiben unverändert, solange dieser Flow nicht abgeschlossen ist.",
+        "title": "Zusätzlichen Verbraucher entfernen"
+      },
+      "consumers": {
+        "data": {
+          "mode": "Messung des lokalen Verbrauchs"
+        },
+        "data_description": {
+          "mode": "Verwende einen Zähler für den gesamten lokalen Verbrauch mit Prozentanteilen oder getrennte, nicht überlappende Zähler für Haushalt und jeden zusätzlichen Verbraucher."
+        },
+        "description": "Wähle genau ein Verbrauchsmodell. Die Gesamtmessung mit Anteilen verwendet einen kumulativen Zähler für Haushalt und zusätzliche Verbraucher; konfigurierte Anteile zerlegen diese gemessene Energie und der Rest gehört zum Haushalt. Separate Zähler verwenden eine reine Haushaltsquelle und je eine Quelle pro zusätzlichem Verbraucher. Ein Moduswechsel erhält stabile Verbraucheridentitäten und Namen, löscht aber Haushaltsquelle und inkompatible Zuordnungen, sodass sie neu eingegeben werden müssen; historische Werte bleiben unverändert. Dies bleibt ein unverbindlicher Entwurf.",
+        "title": "Messung des lokalen Verbrauchs auswählen"
+      },
+      "factors": {
+        "data": {},
+        "description": "Der Entwurf für Messung, Stromspeicher und Verbraucher ist gültig. Die Faktor- und CO2-Quellenkonfiguration ist der nächste Entwicklungsschritt in Issue #8. Die Einrichtung kann noch nicht abgeschlossen werden. Sie erzeugt keinen Config Entry, keinen Store, keinen Speicherherkunftsledger, keinen Listener, keinen Polling-Runner und keine Bilanzbuchung.",
+        "title": "Bilanzfaktoren konfigurieren"
+      },
+      "separate_load": {
+        "data": {
+          "household_source": "Zähler nur für Haushaltsverbrauch",
+          "load_measurement_confirmed": "Ich bestätige den reinen Haushaltsumfang und den Synchronitätsvertrag"
+        },
+        "data_description": {
+          "household_source": "Kumulative Energie ausschließlich für den Haushaltsverbrauch. Alle zusätzlichen Verbraucher, Speicherladung und Netzeinspeisung müssen ausgeschlossen sein.",
+          "load_measurement_confirmed": "Bestätige, dass dieser Zähler nur den Haushalt erfasst, keinen zusätzlichen Verbraucher überlappt, Speicherladung und Netzeinspeisung ausschließt und aus derselben atomaren physischen Erfassung wie alle zuvor ausgewählten Energierollen stammt."
+        },
+        "description": "Wähle den kumulativen reinen Haushaltszähler. Für ihn gelten dieselben Anforderungen an registrierte und aktive sensor-Entities, Geräteklasse energy, Zustandsklasse total oder total_increasing sowie Wh/kWh/MWh wie für die bisherigen Quellen. Er muss exakt dasselbe autoritative co2saver_period_end ausweisen, mindestens alle fünf Minuten neu gemessen werden und die 60-Sekunden-Veröffentlichungsgrenzen erfüllen. Entity-Namen beweisen die Überschneidungsfreiheit nicht, daher ist eine ausdrückliche Bestätigung erforderlich.",
+        "title": "Haushaltsverbrauch konfigurieren"
+      }
+    }
+  },
   "selector": {
     "battery_identity": {
       "options": {
@@ -126,6 +391,20 @@
       "options": {
         "with_battery": "Mit Stromspeicher",
         "without_battery": "Ohne Stromspeicher"
+      }
+    },
+    "consumer_action": {
+      "options": {
+        "add": "Verbraucher hinzufügen",
+        "edit": "Verbraucher bearbeiten",
+        "finish": "Verbraucherentwurf abschließen",
+        "remove": "Verbraucher entfernen"
+      }
+    },
+    "consumption_mode": {
+      "options": {
+        "aggregate_shares": "Gesamtmessung mit Anteilen",
+        "separate_meters": "Separate Zähler"
       }
     },
     "topology": {

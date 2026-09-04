@@ -7,16 +7,24 @@
       "battery_confirmation_required": "Confirm that the battery charge and discharge sources have the correct directions and meet the shared synchronized measurement contract.",
       "capacity_out_of_range": "Enter a usable output capacity from 0.1 through 1000 kWh.",
       "confirmation_required": "Confirm that all selected sources meet the synchronized physical measurement contract.",
+      "consumer_confirmation_required": "Confirm that this consumer has its own non-overlapping local-load meter and meets the shared synchronized measurement contract.",
+      "consumer_not_found": "The selected additional consumer is no longer present in this draft.",
+      "duplicate_consumer_id": "The staged consumer plan contains a duplicate internal consumer identity. Cancel this draft and restart configuration.",
       "duplicate_source": "Each measurement role must use a different source entity.",
       "efficiency_out_of_range": "Enter an AC round-trip efficiency greater than 0 and no more than 100%.",
       "future_last_reported": "Home Assistant reports this source publication time in the future.",
       "future_period_end": "The physical measurement period end is in the future.",
       "invalid_battery_choice": "Choose explicitly whether this plant has a battery storage system.",
       "invalid_battery_identity": "Choose whether this is the same physical battery or a replacement battery.",
+      "invalid_consumer_action": "Choose whether to add, edit, remove, or finish configuring additional consumers.",
+      "invalid_consumer_id": "The staged consumer has an invalid internal identity. Cancel this draft and restart configuration.",
+      "invalid_consumer_plan": "The staged consumer plan is inconsistent. Cancel this draft and restart configuration.",
+      "invalid_consumption_mode": "Choose one of the supported local-consumption measurement modes.",
       "invalid_decimal_separator": "Use a dot (.) as the decimal separator; a comma is not accepted.",
       "invalid_device_class": "The selected source must have device class energy.",
       "invalid_domain": "The selected source must be a sensor entity.",
       "invalid_last_reported": "Home Assistant does not provide a valid publication time (last_reported) for this source.",
+      "invalid_name": "Enter a non-empty name for the additional consumer.",
       "invalid_number": "Enter a plain decimal number without whitespace or exponent notation.",
       "invalid_period_end": "The selected source must expose a valid UTC timestamp in the co2saver_period_end state attribute.",
       "invalid_selection": "Select a valid source entity.",
@@ -26,11 +34,15 @@
       "invalid_topology": "Select one of the supported measurement topologies.",
       "invalid_unit": "The selected source must use Wh, kWh, or MWh.",
       "invalid_value": "The selected source must currently provide a finite, non-negative cumulative energy value.",
+      "load_confirmation_required": "Confirm the scope of this local-load meter and the shared synchronized measurement contract.",
       "period_after_publication": "The physical measurement period end cannot be later than the Home Assistant publication time.",
       "publication_delay": "The source was published more than 60 seconds after its physical measurement period ended.",
       "publication_skew": "The selected roles were published more than 60 seconds apart.",
+      "removal_confirmation_required": "Confirm that the selected additional consumer should be removed from this draft.",
       "required": "This field is required.",
-      "setup_incomplete": "Setup cannot be completed yet. Consumer configuration is the next development step in issue #7; no configuration has been saved.",
+      "setup_incomplete": "Setup cannot be completed yet. Factor and CO2-source configuration is the next development step in issue #8; no configuration has been saved.",
+      "share_out_of_range": "Enter a share from 0 through 100%.",
+      "shares_exceed_total": "The shares of all additional consumers must total no more than 100%; the remainder belongs to the household.",
       "source_disabled": "The selected source is disabled in the entity registry.",
       "source_missing": "The selected source has no current Home Assistant state.",
       "source_not_registered": "The selected source must have an entity registry entry.",
@@ -40,10 +52,96 @@
       "unexpected_field": "This field is not allowed in the current configuration step."
     },
     "step": {
+      "aggregate_load": {
+        "data": {
+          "household_source": "Total local load meter",
+          "load_measurement_confirmed": "I confirm the total local-load scope and synchronized measurement contract"
+        },
+        "data_description": {
+          "household_source": "Cumulative energy for the household and every additional consumer together. It must exclude battery charging and grid export.",
+          "load_measurement_confirmed": "Confirm that this meter covers the complete local load, excludes battery charging and grid export, and comes from the same atomic physical reading as every previously selected energy role."
+        },
+        "description": "Select the cumulative meter for total local consumption. It must meet the same registered and enabled sensor, energy device class, total or total_increasing state class, and Wh/kWh/MWh requirements as the earlier sources. It must expose exactly the same authoritative co2saver_period_end, be measured at least every five minutes, and meet the 60-second publication limits. Entity names cannot prove the physical scope, so explicit confirmation is required.",
+        "title": "Configure total local load"
+      },
+      "consumer_add": {
+        "data": {
+          "consumer_measurement_confirmed": "I confirm this separate consumer meter is non-overlapping and synchronized",
+          "name": "Name",
+          "share_percent": "Share of total local load",
+          "source": "Separate consumer meter"
+        },
+        "data_description": {
+          "consumer_measurement_confirmed": "Confirm that this meter covers only this consumer, does not overlap the household or another consumer, excludes battery charging and grid export, and shares the exact physical measurement period with all other energy roles.",
+          "name": "A display name for this additional consumer; accounting identity does not depend on the name.",
+          "share_percent": "Enter an exact plain decimal from 0 through 100 using a dot. All additional-consumer shares together must not exceed 100%; the remainder belongs to the household.",
+          "source": "A registered and enabled cumulative energy sensor that measures only this additional consumer and fulfills the complete shared source contract."
+        },
+        "description": "Add one optional consumer using the fields for the selected consumption mode. Aggregate mode assigns a percentage of measured local load; that percentage partitions energy only and does not proportionally distribute the system CO2 saving. Separate-meter mode requires its own non-overlapping cumulative source and explicit physical-scope confirmation. A stable internal identity is created for the draft.",
+        "title": "Add additional consumer"
+      },
+      "consumer_edit": {
+        "data": {
+          "consumer_id": "Additional consumer"
+        },
+        "data_description": {
+          "consumer_id": "Select the consumer to rename or reassign. Its stable internal identity is retained."
+        },
+        "description": "Select an existing additional consumer from the current draft. Editing its name or assignment keeps the same stable identity and future time series.",
+        "title": "Select consumer to edit"
+      },
+      "consumer_edit_details": {
+        "data": {
+          "consumer_measurement_confirmed": "I confirm this separate consumer meter is non-overlapping and synchronized",
+          "name": "Name",
+          "share_percent": "Share of total local load",
+          "source": "Separate consumer meter"
+        },
+        "data_description": {
+          "consumer_measurement_confirmed": "Confirm that this meter covers only this consumer, does not overlap the household or another consumer, excludes battery charging and grid export, and shares the exact physical measurement period with all other energy roles.",
+          "name": "Changing the display name retains this consumer's stable internal identity.",
+          "share_percent": "Enter an exact plain decimal from 0 through 100 using a dot. All additional-consumer shares together must not exceed 100%; the remainder belongs to the household.",
+          "source": "A registered and enabled cumulative energy sensor that measures only this additional consumer and fulfills the complete shared source contract."
+        },
+        "description": "Update the selected consumer using the fields for the current mode. Aggregate shares partition measured energy only, not the system CO2 saving. A separate source must be physically non-overlapping and synchronized. The consumer's stable internal identity is preserved.",
+        "title": "Edit additional consumer"
+      },
+      "consumer_menu": {
+        "data": {
+          "action": "Action"
+        },
+        "data_description": {
+          "action": "Add, edit, or remove an additional consumer, or finish this consumer plan. Finishing with no additional consumers is valid."
+        },
+        "description": "Current additional consumers:\n\n{consumer_summary}\n\nChoose the next action. Aggregate percentages only partition measured local energy; they do not proportionally assign the system's guaranteed CO2 saving.",
+        "title": "Additional consumers"
+      },
+      "consumer_remove": {
+        "data": {
+          "confirm_removal": "I confirm removal from this consumer plan",
+          "consumer_id": "Additional consumer"
+        },
+        "data_description": {
+          "confirm_removal": "Removal is only staged now. When the complete flow is committed in issue #8, this consumer's time series ends; adding the same name later creates a new stable identity.",
+          "consumer_id": "Select the additional consumer to remove from the draft."
+        },
+        "description": "Remove one consumer from the staged plan. The active configuration and all historical values remain unchanged while this flow is incomplete.",
+        "title": "Remove additional consumer"
+      },
       "consumers": {
+        "data": {
+          "mode": "Local consumption measurement"
+        },
+        "data_description": {
+          "mode": "Use one total local-load meter with percentages, or separate non-overlapping meters for the household and each additional consumer."
+        },
+        "description": "Choose exactly one consumption model. Aggregate shares use one cumulative meter for household and additional consumers; configured shares partition that measured energy and the household receives the remainder. Separate meters use one household-only source plus one source per additional consumer. Changing mode keeps stable consumer identities and names, but clears the household source and incompatible assignments so they must be entered again; historical values stay unchanged. This remains an uncommitted draft.",
+        "title": "Choose local consumption measurement"
+      },
+      "factors": {
         "data": {},
-        "description": "The measurement and battery-storage draft is valid. Consumer configuration is the next development step in issue #7. Setup cannot yet be completed. It creates no Config Entry, Store, battery-origin ledger, listener, polling runner, or accounting booking.",
-        "title": "Configure consumers"
+        "description": "The measurement, battery-storage, and consumer draft is valid. Factor and CO2-source configuration is the next development step in issue #8. Setup cannot yet be completed. It creates no Config Entry, Store, battery-origin ledger, listener, polling runner, or accounting booking.",
+        "title": "Configure accounting factors"
       },
       "reconfigure": {
         "data": {
@@ -54,6 +152,18 @@
         },
         "description": "Choose the topology for the proposed source replacement. This remains a draft: the existing configuration, storage locator, and historical totals stay unchanged until the complete reconfiguration flow can commit in its final step.",
         "title": "Change measurement topology"
+      },
+      "separate_load": {
+        "data": {
+          "household_source": "Household-only load meter",
+          "load_measurement_confirmed": "I confirm the household-only scope and synchronized measurement contract"
+        },
+        "data_description": {
+          "household_source": "Cumulative energy for household consumption only. It must exclude every additional consumer, battery charging, and grid export.",
+          "load_measurement_confirmed": "Confirm that this meter covers only the household, does not overlap any additional consumer, excludes battery charging and grid export, and comes from the same atomic physical reading as every previously selected energy role."
+        },
+        "description": "Select the cumulative household-only meter. It must meet the same registered and enabled sensor, energy device class, total or total_increasing state class, and Wh/kWh/MWh requirements as the earlier sources. It must expose exactly the same authoritative co2saver_period_end, be measured at least every five minutes, and meet the 60-second publication limits. Entity names cannot prove non-overlap, so explicit confirmation is required.",
+        "title": "Configure household load"
       },
       "sources": {
         "data": {
@@ -115,6 +225,161 @@
       }
     }
   },
+  "options": {
+    "error": {
+      "battery_confirmation_required": "Confirm that the battery charge and discharge sources have the correct directions and meet the shared synchronized measurement contract.",
+      "capacity_out_of_range": "Enter a usable output capacity from 0.1 through 1000 kWh.",
+      "confirmation_required": "Confirm that all selected sources meet the synchronized physical measurement contract.",
+      "consumer_confirmation_required": "Confirm that this consumer has its own non-overlapping local-load meter and meets the shared synchronized measurement contract.",
+      "consumer_not_found": "The selected additional consumer is no longer present in this draft.",
+      "duplicate_consumer_id": "The staged consumer plan contains a duplicate internal consumer identity. Cancel this draft and restart configuration.",
+      "duplicate_source": "Each measurement role must use a different source entity.",
+      "efficiency_out_of_range": "Enter an AC round-trip efficiency greater than 0 and no more than 100%.",
+      "future_last_reported": "Home Assistant reports this source publication time in the future.",
+      "future_period_end": "The physical measurement period end is in the future.",
+      "invalid_battery_choice": "Choose explicitly whether this plant has a battery storage system.",
+      "invalid_battery_identity": "Choose whether this is the same physical battery or a replacement battery.",
+      "invalid_consumer_action": "Choose whether to add, edit, remove, or finish configuring additional consumers.",
+      "invalid_consumer_id": "The staged consumer has an invalid internal identity. Cancel this draft and restart configuration.",
+      "invalid_consumer_plan": "The staged consumer plan is inconsistent. Cancel this draft and restart configuration.",
+      "invalid_consumption_mode": "Choose one of the supported local-consumption measurement modes.",
+      "invalid_decimal_separator": "Use a dot (.) as the decimal separator; a comma is not accepted.",
+      "invalid_device_class": "The selected source must have device class energy.",
+      "invalid_domain": "The selected source must be a sensor entity.",
+      "invalid_last_reported": "Home Assistant does not provide a valid publication time (last_reported) for this source.",
+      "invalid_name": "Enter a non-empty name for the additional consumer.",
+      "invalid_number": "Enter a plain decimal number without whitespace or exponent notation.",
+      "invalid_period_end": "The selected source must expose a valid UTC timestamp in the co2saver_period_end state attribute.",
+      "invalid_selection": "Select a valid source entity.",
+      "invalid_source": "The selected source does not meet the cumulative energy source contract.",
+      "invalid_source_vector": "The selected energy sources do not form a complete, valid synchronized measurement. Correct their states and try again. To change a source selected in an earlier step, cancel this draft and restart configuration.",
+      "invalid_state_class": "The selected source must have state class total or total_increasing.",
+      "invalid_topology": "Select one of the supported measurement topologies.",
+      "invalid_unit": "The selected source must use Wh, kWh, or MWh.",
+      "invalid_value": "The selected source must currently provide a finite, non-negative cumulative energy value.",
+      "load_confirmation_required": "Confirm the scope of this local-load meter and the shared synchronized measurement contract.",
+      "period_after_publication": "The physical measurement period end cannot be later than the Home Assistant publication time.",
+      "publication_delay": "The source was published more than 60 seconds after its physical measurement period ended.",
+      "publication_skew": "The selected roles were published more than 60 seconds apart.",
+      "removal_confirmation_required": "Confirm that the selected additional consumer should be removed from this draft.",
+      "required": "This field is required.",
+      "setup_incomplete": "Setup cannot be completed yet. Factor and CO2-source configuration is the next development step in issue #8; no configuration has been saved.",
+      "share_out_of_range": "Enter a share from 0 through 100%.",
+      "shares_exceed_total": "The shares of all additional consumers must total no more than 100%; the remainder belongs to the household.",
+      "source_disabled": "The selected source is disabled in the entity registry.",
+      "source_missing": "The selected source has no current Home Assistant state.",
+      "source_not_registered": "The selected source must have an entity registry entry.",
+      "source_stale": "The source's physical measurement is more than five minutes old.",
+      "source_unavailable": "The selected source is currently unavailable or unknown.",
+      "sources_not_synchronized": "All selected sources must expose exactly the same physical period end in co2saver_period_end.",
+      "unexpected_field": "This field is not allowed in the current configuration step."
+    },
+    "step": {
+      "aggregate_load": {
+        "data": {
+          "household_source": "Total local load meter",
+          "load_measurement_confirmed": "I confirm the total local-load scope and synchronized measurement contract"
+        },
+        "data_description": {
+          "household_source": "Cumulative energy for the household and every additional consumer together. It must exclude battery charging and grid export.",
+          "load_measurement_confirmed": "Confirm that this meter covers the complete local load, excludes battery charging and grid export, and comes from the same atomic physical reading as every previously selected energy role."
+        },
+        "description": "Select the cumulative meter for total local consumption. It must meet the same registered and enabled sensor, energy device class, total or total_increasing state class, and Wh/kWh/MWh requirements as the earlier sources. It must expose exactly the same authoritative co2saver_period_end, be measured at least every five minutes, and meet the 60-second publication limits. Entity names cannot prove the physical scope, so explicit confirmation is required.",
+        "title": "Configure total local load"
+      },
+      "consumer_add": {
+        "data": {
+          "consumer_measurement_confirmed": "I confirm this separate consumer meter is non-overlapping and synchronized",
+          "name": "Name",
+          "share_percent": "Share of total local load",
+          "source": "Separate consumer meter"
+        },
+        "data_description": {
+          "consumer_measurement_confirmed": "Confirm that this meter covers only this consumer, does not overlap the household or another consumer, excludes battery charging and grid export, and shares the exact physical measurement period with all other energy roles.",
+          "name": "A display name for this additional consumer; accounting identity does not depend on the name.",
+          "share_percent": "Enter an exact plain decimal from 0 through 100 using a dot. All additional-consumer shares together must not exceed 100%; the remainder belongs to the household.",
+          "source": "A registered and enabled cumulative energy sensor that measures only this additional consumer and fulfills the complete shared source contract."
+        },
+        "description": "Add one optional consumer using the fields for the selected consumption mode. Aggregate mode assigns a percentage of measured local load; that percentage partitions energy only and does not proportionally distribute the system CO2 saving. Separate-meter mode requires its own non-overlapping cumulative source and explicit physical-scope confirmation. A stable internal identity is created for the draft.",
+        "title": "Add additional consumer"
+      },
+      "consumer_edit": {
+        "data": {
+          "consumer_id": "Additional consumer"
+        },
+        "data_description": {
+          "consumer_id": "Select the consumer to rename or reassign. Its stable internal identity is retained."
+        },
+        "description": "Select an existing additional consumer from the current draft. Editing its name or assignment keeps the same stable identity and future time series.",
+        "title": "Select consumer to edit"
+      },
+      "consumer_edit_details": {
+        "data": {
+          "consumer_measurement_confirmed": "I confirm this separate consumer meter is non-overlapping and synchronized",
+          "name": "Name",
+          "share_percent": "Share of total local load",
+          "source": "Separate consumer meter"
+        },
+        "data_description": {
+          "consumer_measurement_confirmed": "Confirm that this meter covers only this consumer, does not overlap the household or another consumer, excludes battery charging and grid export, and shares the exact physical measurement period with all other energy roles.",
+          "name": "Changing the display name retains this consumer's stable internal identity.",
+          "share_percent": "Enter an exact plain decimal from 0 through 100 using a dot. All additional-consumer shares together must not exceed 100%; the remainder belongs to the household.",
+          "source": "A registered and enabled cumulative energy sensor that measures only this additional consumer and fulfills the complete shared source contract."
+        },
+        "description": "Update the selected consumer using the fields for the current mode. Aggregate shares partition measured energy only, not the system CO2 saving. A separate source must be physically non-overlapping and synchronized. The consumer's stable internal identity is preserved.",
+        "title": "Edit additional consumer"
+      },
+      "consumer_menu": {
+        "data": {
+          "action": "Action"
+        },
+        "data_description": {
+          "action": "Add, edit, or remove an additional consumer, or finish this consumer plan. Finishing with no additional consumers is valid."
+        },
+        "description": "Current additional consumers:\n\n{consumer_summary}\n\nChoose the next action. Aggregate percentages only partition measured local energy; they do not proportionally assign the system's guaranteed CO2 saving.",
+        "title": "Additional consumers"
+      },
+      "consumer_remove": {
+        "data": {
+          "confirm_removal": "I confirm removal from this consumer plan",
+          "consumer_id": "Additional consumer"
+        },
+        "data_description": {
+          "confirm_removal": "Removal is only staged now. When the complete flow is committed in issue #8, this consumer's time series ends; adding the same name later creates a new stable identity.",
+          "consumer_id": "Select the additional consumer to remove from the draft."
+        },
+        "description": "Remove one consumer from the staged plan. The active configuration and all historical values remain unchanged while this flow is incomplete.",
+        "title": "Remove additional consumer"
+      },
+      "consumers": {
+        "data": {
+          "mode": "Local consumption measurement"
+        },
+        "data_description": {
+          "mode": "Use one total local-load meter with percentages, or separate non-overlapping meters for the household and each additional consumer."
+        },
+        "description": "Choose exactly one consumption model. Aggregate shares use one cumulative meter for household and additional consumers; configured shares partition that measured energy and the household receives the remainder. Separate meters use one household-only source plus one source per additional consumer. Changing mode keeps stable consumer identities and names, but clears the household source and incompatible assignments so they must be entered again; historical values stay unchanged. This remains an uncommitted draft.",
+        "title": "Choose local consumption measurement"
+      },
+      "factors": {
+        "data": {},
+        "description": "The measurement, battery-storage, and consumer draft is valid. Factor and CO2-source configuration is the next development step in issue #8. Setup cannot yet be completed. It creates no Config Entry, Store, battery-origin ledger, listener, polling runner, or accounting booking.",
+        "title": "Configure accounting factors"
+      },
+      "separate_load": {
+        "data": {
+          "household_source": "Household-only load meter",
+          "load_measurement_confirmed": "I confirm the household-only scope and synchronized measurement contract"
+        },
+        "data_description": {
+          "household_source": "Cumulative energy for household consumption only. It must exclude every additional consumer, battery charging, and grid export.",
+          "load_measurement_confirmed": "Confirm that this meter covers only the household, does not overlap any additional consumer, excludes battery charging and grid export, and comes from the same atomic physical reading as every previously selected energy role."
+        },
+        "description": "Select the cumulative household-only meter. It must meet the same registered and enabled sensor, energy device class, total or total_increasing state class, and Wh/kWh/MWh requirements as the earlier sources. It must expose exactly the same authoritative co2saver_period_end, be measured at least every five minutes, and meet the 60-second publication limits. Entity names cannot prove non-overlap, so explicit confirmation is required.",
+        "title": "Configure household load"
+      }
+    }
+  },
   "selector": {
     "battery_identity": {
       "options": {
@@ -126,6 +391,20 @@
       "options": {
         "with_battery": "With battery storage",
         "without_battery": "Without battery storage"
+      }
+    },
+    "consumer_action": {
+      "options": {
+        "add": "Add consumer",
+        "edit": "Edit consumer",
+        "finish": "Finish consumer plan",
+        "remove": "Remove consumer"
+      }
+    },
+    "consumption_mode": {
+      "options": {
+        "aggregate_shares": "Total measurement with shares",
+        "separate_meters": "Separate meters"
       }
     },
     "topology": {
