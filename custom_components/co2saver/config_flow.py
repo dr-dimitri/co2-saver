@@ -11,7 +11,12 @@ from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
 import voluptuous as vol
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult, OptionsFlow
+from homeassistant.config_entries import (
+    SOURCE_RECONFIGURE,
+    ConfigFlow,
+    ConfigFlowResult,
+    OptionsFlow,
+)
 from homeassistant.core import callback
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.selector import (
@@ -57,7 +62,7 @@ class Co2SaverConfigFlow(ConsumerFlowSteps, ConfigFlow, domain=DOMAIN):
     @staticmethod
     @callback
     def async_get_options_flow(config_entry: ConfigEntry) -> OptionsFlow:
-        """Expose the same staged consumer editor without committing options."""
+        """Expose the consumer and factor editor for prospective data changes."""
         _ = config_entry
         return Co2SaverOptionsFlow()
 
@@ -81,8 +86,23 @@ class Co2SaverConfigFlow(ConsumerFlowSteps, ConfigFlow, domain=DOMAIN):
         """Stage source changes while retaining the original entry and locator."""
         if not self._draft:
             self._draft = deepcopy(dict(self._get_reconfigure_entry().data))
+            self._original_entry_data = deepcopy(self._draft)
             self._original_battery = deepcopy(self._draft.get("battery"))
         return await self._async_topology_step("reconfigure", user_input)
+
+    def _configuration_entry(self) -> ConfigEntry | None:
+        """Retain the original owner during a source reconfiguration."""
+        if self.source == SOURCE_RECONFIGURE:
+            return self._get_reconfigure_entry()
+        return None
+
+    def _finish_configuration(
+        self, data: dict[str, Any], entry: ConfigEntry | None
+    ) -> ConfigFlowResult:
+        """Create only after bootstrap, or synchronously update the old owner."""
+        if entry is None:
+            return self.async_create_entry(title="CO2 Saver", data=data)
+        return self.async_update_reload_and_abort(entry, data=data)
 
     async def _async_topology_step(
         self, step_id: str, user_input: Mapping[str, object] | None
@@ -123,8 +143,8 @@ class Co2SaverConfigFlow(ConsumerFlowSteps, ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             draft, errors = validate_source_selection(self.hass, topology, user_input)
             if draft is not None:
-                # The final commit repeats this check under the reservations lock
-                # in issue #8. Intermediate drafts reserve or mutate nothing.
+                # The final commit repeats this check under the reservations lock.
+                # Intermediate drafts reserve or mutate nothing.
                 self._async_abort_entries_match({"plant_key": draft["plant_key"]})
                 self._draft.update(draft)
                 return await self.async_step_storage()
@@ -308,4 +328,19 @@ class Co2SaverOptionsFlow(ConsumerFlowSteps, OptionsFlow):
         """Read the authoritative data only; never overlay opaque options."""
         if not self._draft:
             self._draft = deepcopy(dict(self.config_entry.data))
+            self._original_entry_data = deepcopy(self._draft)
         return await self.async_step_consumers(user_input)
+
+    def _configuration_entry(self) -> ConfigEntry:
+        """Keep authoritative settings in entry.data for every edit path."""
+        return self.config_entry
+
+    def _finish_configuration(
+        self, data: dict[str, Any], entry: ConfigEntry | None
+    ) -> ConfigFlowResult:
+        """Commit data synchronously and schedule exactly one reload."""
+        if entry is None:
+            raise RuntimeError
+        self.hass.config_entries.async_update_entry(entry, data=data)
+        self.hass.config_entries.async_schedule_reload(entry.entry_id)
+        return self.async_abort(reason="options_saved")

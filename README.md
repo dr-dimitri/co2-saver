@@ -2,11 +2,10 @@
 
 CO2 Saver wird eine Home-Assistant-Custom-Integration, die nachvollziehbar berechnet, wie viele Treibhausgasemissionen durch selbst erzeugten und selbst verbrauchten PV-Strom vermieden werden.
 
-> **Status:** Frühe Entwicklungsphase. Der Config Flow kann Messtopologie,
-> PV-/Netzquellen, einen optionalen Stromspeicher und die Verbraucherzuordnung
-> als unverbindlichen Entwurf prüfen. Er endet bewusst am Platzhalter für den
-> ausstehenden Abschluss in Issue #8: Es gibt noch keine fertig konfigurierbare
-> Anlage, laufende Messauswertung oder CO₂-Buchung.
+> **Status:** Frühe Entwicklungsphase. Der vollständige Config Flow kann eine
+> Anlage mit Messtopologie, optionalem Speicher, Verbrauchern und CO₂-Faktoren
+> einrichten. Setup prüft und bindet einen atomar gespeicherten Zustand; es läuft
+> noch keine Messauswertung oder CO₂-Buchung. Diese folgen in Issues #9 und #10.
 
 ## Zielbild
 
@@ -25,7 +24,7 @@ Direkt genutzter PV-Strom kann beim Verbrauch bilanziert werden. In einen Speich
 
 ## Aktueller Konfigurationsstand
 
-Die ersten drei Abschnitte des zusammenhängenden UI-Config-Flows sind umgesetzt.
+Der zusammenhängende UI-Config-Flow ist vollständig umgesetzt.
 Zuerst erfasst der Flow genau eine der beiden Messtopologien und zeigt nur deren
 Quellenfelder:
 
@@ -34,7 +33,7 @@ Quellenfelder:
 | Wechselrichter | PV-Erzeugung, Netzbezug und Netzeinspeisung | keine |
 | Smartmeter | Netzbezug und Netzeinspeisung | PV-Erzeugung nur zur Plausibilitätsprüfung |
 
-Alle ausgewählten Quellen müssen in Home Assistants Entity Registry
+Alle ausgewählten Energiequellen müssen in Home Assistants Entity Registry
 eingetragene, richtungsgetrennte kumulative AC-Energiesensoren sein. Zulässig
 sind ausschließlich `sensor`-Entities mit `device_class: energy`,
 `state_class: total` oder `total_increasing` und der Einheit `Wh`, `kWh` oder
@@ -79,19 +78,43 @@ unveränderten Zähler-Entities kann CO2 Saver nicht automatisch erkennen.
 Derselbe Speicher behält seine interne Identität; beim erstmaligen Hinzufügen
 oder ausdrücklich bestätigten Austausch erzeugt der Flow genau einmal eine neue
 Identität im Entwurf. Diese Auswahl ist kein dauerhaft gespeichertes
-Austauschmerkmal. Wenn der vollständige Flow in Issue #8 später abgeschlossen
-wird, wirkt jede fachliche Änderung nur prospektiv über einen neuen
+Austauschmerkmal. Beim Abschluss des vollständigen Flows wirkt jede fachliche Änderung nur prospektiv über einen neuen
 vollständigen Segmentfingerabdruck und einen konservativ quarantänisierten
 Speicherbestand; historische Summen werden nicht neu berechnet.
 
-Eine gültige Verbraucherzuordnung erreicht lediglich den Platzhalter für den in
-Issue #8 folgenden Faktor- und Abschluss-Schritt. Bis Issue #8 vollständig
-umgesetzt ist, erzeugt der Flow keinen Config Entry, keinen Store, keinen
-Speicherherkunftsledger, keinen Listener, keinen Polling-Runner und keine
-Bilanzbuchung. Auch Rekonfiguration und vorbereiteter Options-Flow bleiben bis
-zum späteren Abschluss des gesamten Flows reine Entwürfe; vorhandener
-Store-Locator, historische Summen und die aktive Konfiguration bleiben
-unverändert.
+Nach den Verbrauchern folgt die Konfiguration der Emissionsfaktoren:
+
+| Feld | Einheit und gültiger Bereich |
+| --- | --- |
+| Netz-CO₂-Sensor | Registrierter `sensor` in `gCO2e/kWh`, `gCO2eq/kWh`, `gCO₂e/kWh` oder der entsprechenden Kilogrammvariante; normalisiert `0` bis `5000 g CO₂e/kWh` |
+| Maximales Quellenalter | Ganze Minuten von `1` bis `1440`, sichtbarer Vorschlag `60` |
+| PV-Herstellungsfaktor | Expliziter Dezimaltext von `0` bis `5000 g CO₂e/kWh`, pro erzeugter AC-kWh |
+| Speicher-Herstellungsfaktor | Nur mit Speicher: expliziter Dezimaltext von `0` bis `5000 g CO₂e/kWh`, pro anrechenbar entladener AC-kWh |
+
+Es gibt keine vorbelegten Herstellungsfaktoren. Dezimalpunkt, Wertebereich und
+aktuelle Sensorqualität werden vor dem Speichern geprüft. Ein `ppm`-Sensor ist
+keine Netz-CO₂-Quelle. Die Netzprobe muss endlich, nicht negativ, verfügbar und
+über `last_reported` zeitlich gültig sein; eine Device Class wird nicht verlangt.
+
+Zwischenschritte bleiben unverbindliche Entwürfe. Erst der vollständig geprüfte
+Abschluss reserviert unter einem gemeinsamen Lock die Anlagenkennung und ein
+neues Manifest. Nach überprüftem Zurücklesen wird der Config Entry erzeugt. Setup
+bindet das Manifest an diesen Entry und initialisiert oder übernimmt genau die
+dort bezeichnete Generation. Sie enthält die Messphase, den vollständigen
+Segmentfingerabdruck, Speicherherkunft, Summen und Diagnosen. Es läuft in diesem
+Entwicklungsstand noch kein Messtimer.
+
+Über **Konfigurieren** können Verbraucher und Faktoren bearbeitet werden;
+**Neu konfigurieren** führt zusätzlich durch Topologie und Speicher. Abbrechen
+verändert keine aktive Einstellung. Jeder fachliche Wechsel beginnt beim Reload
+ein neues zukünftiges Segment mit neuer Messbaseline und konservativer
+Speicherquarantäne. Reine Anzeigenamen- und Entity-ID-Änderungen erhalten das
+Segment. Historische Summen und der unveränderliche Store-Locator bleiben erhalten.
+
+Ein fehlender, beschädigter oder fremder Zustand wird niemals automatisch auf
+null gesetzt. Setup bleibt dann ohne Listener und Ergebniswerte angehalten.
+Der bestätigte Reparaturweg folgt in Issue #12. Entfernte Quellen verlangen eine
+Neukonfiguration; Umbenennungen werden über ihre stabile Registry-ID aufgelöst.
 
 ## Eingabemodelle
 
@@ -158,12 +181,10 @@ bereit. Der Store erhält den Codec für den vollständigen Zustand und speicher
 Messbaseline und spätere Bilanzwerte gemeinsam in einer verifizierten
 Transaktion. Er initialisiert einen fehlenden Zustand nur nach ausdrücklich
 bestätigter physischer Abwesenheit; ein leeres Ladeergebnis genügt dafür nicht.
-Die ersten drei UI-Schritte für Topologie, PV-/Netzquellen, einen optionalen
-Speicher und Verbraucher nutzen diesen Vertrag bereits zur aktuellen
-Validierung, halten ihren Zustand aber absichtlich nur als Flow-Entwurf. Die
-restliche Konfiguration und der atomare Abschluss folgen in Issue #8, die
-Aktivierung des Runners ohne Speicher in #9 und mit Speicherbilanz in #10.
-Ergebnis-Entities folgen in den dafür vorgesehenen Roadmap-Issues.
+Der vollständige UI-Flow nutzt diesen Vertrag zur aktuellen Validierung.
+Manifest, Eigentümerbindung und Generation werden atomar gespeichert und jeweils
+frisch zurückgelesen. Der Runner wird ohne Speicher in #9 und mit Speicher in #10
+aktiviert. Ergebnis-Entities folgen in #11.
 
 ## Entwicklung
 

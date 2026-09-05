@@ -15,7 +15,7 @@ from uuid import UUID
 import pytest
 import voluptuous as vol
 from homeassistant.config_entries import SOURCE_USER
-from homeassistant.data_entry_flow import FlowResultType
+from homeassistant.data_entry_flow import FlowResultType, InvalidData
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.selector import SelectSelector, TextSelector
 from homeassistant.util import dt as dt_util
@@ -337,10 +337,11 @@ async def test_household_only_both_modes_reach_factors_without_committing(
     assert len(consumption["household_id"]) == 32
     int(consumption["household_id"], 16)
     assert json.loads(json.dumps(flow.configuration_draft)) == flow.configuration_draft
-    blocked = await _configure(hass, result, {})
-    assert blocked["errors"] == {"base": "setup_incomplete"}
+    with pytest.raises(InvalidData) as error:
+        await _configure(hass, result, {})
+    assert error.value.path == ["grid_intensity_source"]
     assert not hass.config_entries.async_entries(DOMAIN)
-    hass.config_entries.flow.async_abort(blocked["flow_id"])
+    hass.config_entries.flow.async_abort(result["flow_id"])
 
 
 @pytest.mark.parametrize(
@@ -767,12 +768,13 @@ async def test_options_rename_preserves_consumer_identity_and_entry(
     detached = flow.configuration_draft
     detached["consumption"]["consumers"].clear()
     assert flow.configuration_draft["consumption"]["consumers"]
-    blocked = await _configure(hass, result, {})
-    assert blocked["errors"] == {"base": "setup_incomplete"}
+    with pytest.raises(InvalidData) as error:
+        await _configure(hass, result, {})
+    assert error.value.path == ["grid_intensity_source"]
     assert dict(entry.data) == original_data
     assert dict(entry.options) == original_options
     assert hass.config_entries.async_entries(DOMAIN) == [entry]
-    hass.config_entries.options.async_abort(blocked["flow_id"])
+    hass.config_entries.options.async_abort(result["flow_id"])
 
 
 async def test_options_edit_replaces_separate_source_under_stable_consumer_id(

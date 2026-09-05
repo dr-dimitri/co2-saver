@@ -1,7 +1,11 @@
 {
   "config": {
     "abort": {
-      "already_configured": "A CO2 Saver plant already uses this grid import and grid export source pair."
+      "already_configured": "This grid boundary already belongs to a CO2 Saver plant.",
+      "already_in_progress": "Another configuration for this plant is being committed.",
+      "configuration_changed": "The active configuration changed during editing. Restart this flow.",
+      "options_saved": "Settings were saved.",
+      "reconfigure_successful": "The plant was reconfigured."
     },
     "error": {
       "battery_confirmation_required": "Confirm that the battery charge and discharge sources have the correct directions and meet the shared synchronized measurement contract.",
@@ -12,8 +16,11 @@
       "duplicate_consumer_id": "The staged consumer plan contains a duplicate internal consumer identity. Cancel this draft and restart configuration.",
       "duplicate_source": "Each measurement role must use a different source entity.",
       "efficiency_out_of_range": "Enter an AC round-trip efficiency greater than 0 and no more than 100%.",
+      "factor_out_of_range": "Enter a factor from 0 through 5000 g CO₂e/kWh.",
       "future_last_reported": "Home Assistant reports this source publication time in the future.",
       "future_period_end": "The physical measurement period end is in the future.",
+      "grid_age_out_of_range": "Enter a whole number of minutes from 1 through 1440.",
+      "grid_source_stale": "The grid-intensity sample exceeds the configured maximum age.",
       "invalid_battery_choice": "Choose explicitly whether this plant has a battery storage system.",
       "invalid_battery_identity": "Choose whether this is the same physical battery or a replacement battery.",
       "invalid_consumer_action": "Choose whether to add, edit, remove, or finish configuring additional consumers.",
@@ -23,7 +30,10 @@
       "invalid_decimal_separator": "Use a dot (.) as the decimal separator; a comma is not accepted.",
       "invalid_device_class": "The selected source must have device class energy.",
       "invalid_domain": "The selected source must be a sensor entity.",
+      "invalid_grid_unit": "Grid intensity requires gCO2e/kWh, gCO2eq/kWh, gCO₂e/kWh or the corresponding kilogram unit.",
+      "invalid_grid_value": "The grid-intensity sensor must provide a finite value from 0 through 5000 g CO₂e/kWh.",
       "invalid_last_reported": "Home Assistant does not provide a valid publication time (last_reported) for this source.",
+      "invalid_measurement_plan": "The complete configuration is invalid. Restart configuration.",
       "invalid_name": "Enter a non-empty name for the additional consumer.",
       "invalid_number": "Enter a plain decimal number without whitespace or exponent notation.",
       "invalid_period_end": "The selected source must expose a valid UTC timestamp in the co2saver_period_end state attribute.",
@@ -40,7 +50,6 @@
       "publication_skew": "The selected roles were published more than 60 seconds apart.",
       "removal_confirmation_required": "Confirm that the selected additional consumer should be removed from this draft.",
       "required": "This field is required.",
-      "setup_incomplete": "Setup cannot be completed yet. Factor and CO2-source configuration is the next development step in issue #8; no configuration has been saved.",
       "share_out_of_range": "Enter a share from 0 through 100%.",
       "shares_exceed_total": "The shares of all additional consumers must total no more than 100%; the remainder belongs to the household.",
       "source_disabled": "The selected source is disabled in the entity registry.",
@@ -49,6 +58,7 @@
       "source_stale": "The source's physical measurement is more than five minutes old.",
       "source_unavailable": "The selected source is currently unavailable or unknown.",
       "sources_not_synchronized": "All selected sources must expose exactly the same physical period end in co2saver_period_end.",
+      "storage_failed": "Configuration could not be safely saved and read back. Check local storage and retry.",
       "unexpected_field": "This field is not allowed in the current configuration step."
     },
     "step": {
@@ -122,7 +132,7 @@
           "consumer_id": "Additional consumer"
         },
         "data_description": {
-          "confirm_removal": "Removal is only staged now. When the complete flow is committed in issue #8, this consumer's time series ends; adding the same name later creates a new stable identity.",
+          "confirm_removal": "Removal is only staged now. When the complete flow is committed, this consumer's time series ends; adding the same name later creates a new stable identity.",
           "consumer_id": "Select the additional consumer to remove from the draft."
         },
         "description": "Remove one consumer from the staged plan. The active configuration and all historical values remain unchanged while this flow is incomplete.",
@@ -139,9 +149,14 @@
         "title": "Choose local consumption measurement"
       },
       "factors": {
-        "data": {},
-        "description": "The measurement, battery-storage, and consumer draft is valid. Factor and CO2-source configuration is the next development step in issue #8. Setup cannot yet be completed. It creates no Config Entry, Store, battery-origin ledger, listener, polling runner, or accounting booking.",
-        "title": "Configure accounting factors"
+        "data": {
+          "battery_factor": "Battery lifecycle factor (g CO₂e/kWh)",
+          "grid_intensity_source": "Grid carbon intensity (g CO₂e/kWh or kg CO₂e/kWh)",
+          "grid_max_age_minutes": "Maximum grid-intensity sample age (minutes)",
+          "pv_factor": "PV lifecycle factor (g CO₂e/kWh)"
+        },
+        "description": "Select a registered grid carbon-intensity sensor with an explicit CO₂e unit. Enter lifecycle factors explicitly as plain decimal text with a dot in g CO₂e/kWh (0 through 5000). The PV factor is per generated AC kWh; the battery factor is per credited AC kWh discharged. Changes start a new future measurement segment and preserve historical totals. Completing this step saves the complete configuration.",
+        "title": "Configure CO₂ factors"
       },
       "reconfigure": {
         "data": {
@@ -205,7 +220,7 @@
         "data_description": {
           "battery_charge": "Direction-separated cumulative energy measured at the battery's AC input while charging.",
           "battery_discharge": "Direction-separated cumulative energy measured at the battery's AC output while discharging.",
-          "battery_identity": "Required when reconfiguring an existing battery; no option is preselected. Choose replacement even if the meter entities stayed the same, because CO2 Saver cannot infer a physical replacement behind unchanged meters. Choosing the same battery keeps its internal identity; choosing replacement creates one new draft identity. The choice is not stored as a lasting flag. When the complete flow commits an effective change in issue #8, it starts a prospective segment, conservatively quarantines prior battery inventory, and never recalculates history.",
+          "battery_identity": "Required when reconfiguring an existing battery; no option is preselected. Choose replacement even if the meter entities stayed the same, because CO2 Saver cannot infer a physical replacement behind unchanged meters. Choosing the same battery keeps its internal identity; choosing replacement creates one new draft identity. The choice is not stored as a lasting flag. When the complete flow commits an effective change, it starts a prospective segment, conservatively quarantines prior battery inventory, and never recalculates history.",
           "battery_sources_confirmed": "Confirm that charge and discharge use the correct separate directions and come from the same atomic physical reading as every selected PV and grid role, with exactly the same co2saver_period_end.",
           "round_trip_efficiency_percent": "Enter a plain decimal greater than 0 and no more than 100. The suggested 90% must still be visibly confirmed.",
           "usable_capacity_kwh": "Enter the usable energy available at the battery's AC output from 0.1 through 1000 kWh. There is no default."
@@ -226,6 +241,13 @@
     }
   },
   "options": {
+    "abort": {
+      "already_configured": "This grid boundary already belongs to a CO2 Saver plant.",
+      "already_in_progress": "Another configuration for this plant is being committed.",
+      "configuration_changed": "The active configuration changed during editing. Restart this flow.",
+      "options_saved": "Settings were saved.",
+      "reconfigure_successful": "The plant was reconfigured."
+    },
     "error": {
       "battery_confirmation_required": "Confirm that the battery charge and discharge sources have the correct directions and meet the shared synchronized measurement contract.",
       "capacity_out_of_range": "Enter a usable output capacity from 0.1 through 1000 kWh.",
@@ -235,8 +257,11 @@
       "duplicate_consumer_id": "The staged consumer plan contains a duplicate internal consumer identity. Cancel this draft and restart configuration.",
       "duplicate_source": "Each measurement role must use a different source entity.",
       "efficiency_out_of_range": "Enter an AC round-trip efficiency greater than 0 and no more than 100%.",
+      "factor_out_of_range": "Enter a factor from 0 through 5000 g CO₂e/kWh.",
       "future_last_reported": "Home Assistant reports this source publication time in the future.",
       "future_period_end": "The physical measurement period end is in the future.",
+      "grid_age_out_of_range": "Enter a whole number of minutes from 1 through 1440.",
+      "grid_source_stale": "The grid-intensity sample exceeds the configured maximum age.",
       "invalid_battery_choice": "Choose explicitly whether this plant has a battery storage system.",
       "invalid_battery_identity": "Choose whether this is the same physical battery or a replacement battery.",
       "invalid_consumer_action": "Choose whether to add, edit, remove, or finish configuring additional consumers.",
@@ -246,7 +271,10 @@
       "invalid_decimal_separator": "Use a dot (.) as the decimal separator; a comma is not accepted.",
       "invalid_device_class": "The selected source must have device class energy.",
       "invalid_domain": "The selected source must be a sensor entity.",
+      "invalid_grid_unit": "Grid intensity requires gCO2e/kWh, gCO2eq/kWh, gCO₂e/kWh or the corresponding kilogram unit.",
+      "invalid_grid_value": "The grid-intensity sensor must provide a finite value from 0 through 5000 g CO₂e/kWh.",
       "invalid_last_reported": "Home Assistant does not provide a valid publication time (last_reported) for this source.",
+      "invalid_measurement_plan": "The complete configuration is invalid. Restart configuration.",
       "invalid_name": "Enter a non-empty name for the additional consumer.",
       "invalid_number": "Enter a plain decimal number without whitespace or exponent notation.",
       "invalid_period_end": "The selected source must expose a valid UTC timestamp in the co2saver_period_end state attribute.",
@@ -263,7 +291,6 @@
       "publication_skew": "The selected roles were published more than 60 seconds apart.",
       "removal_confirmation_required": "Confirm that the selected additional consumer should be removed from this draft.",
       "required": "This field is required.",
-      "setup_incomplete": "Setup cannot be completed yet. Factor and CO2-source configuration is the next development step in issue #8; no configuration has been saved.",
       "share_out_of_range": "Enter a share from 0 through 100%.",
       "shares_exceed_total": "The shares of all additional consumers must total no more than 100%; the remainder belongs to the household.",
       "source_disabled": "The selected source is disabled in the entity registry.",
@@ -272,6 +299,7 @@
       "source_stale": "The source's physical measurement is more than five minutes old.",
       "source_unavailable": "The selected source is currently unavailable or unknown.",
       "sources_not_synchronized": "All selected sources must expose exactly the same physical period end in co2saver_period_end.",
+      "storage_failed": "Configuration could not be safely saved and read back. Check local storage and retry.",
       "unexpected_field": "This field is not allowed in the current configuration step."
     },
     "step": {
@@ -345,7 +373,7 @@
           "consumer_id": "Additional consumer"
         },
         "data_description": {
-          "confirm_removal": "Removal is only staged now. When the complete flow is committed in issue #8, this consumer's time series ends; adding the same name later creates a new stable identity.",
+          "confirm_removal": "Removal is only staged now. When the complete flow is committed, this consumer's time series ends; adding the same name later creates a new stable identity.",
           "consumer_id": "Select the additional consumer to remove from the draft."
         },
         "description": "Remove one consumer from the staged plan. The active configuration and all historical values remain unchanged while this flow is incomplete.",
@@ -362,9 +390,14 @@
         "title": "Choose local consumption measurement"
       },
       "factors": {
-        "data": {},
-        "description": "The measurement, battery-storage, and consumer draft is valid. Factor and CO2-source configuration is the next development step in issue #8. Setup cannot yet be completed. It creates no Config Entry, Store, battery-origin ledger, listener, polling runner, or accounting booking.",
-        "title": "Configure accounting factors"
+        "data": {
+          "battery_factor": "Battery lifecycle factor (g CO₂e/kWh)",
+          "grid_intensity_source": "Grid carbon intensity (g CO₂e/kWh or kg CO₂e/kWh)",
+          "grid_max_age_minutes": "Maximum grid-intensity sample age (minutes)",
+          "pv_factor": "PV lifecycle factor (g CO₂e/kWh)"
+        },
+        "description": "Select a registered grid carbon-intensity sensor with an explicit CO₂e unit. Enter lifecycle factors explicitly as plain decimal text with a dot in g CO₂e/kWh (0 through 5000). The PV factor is per generated AC kWh; the battery factor is per credited AC kWh discharged. Changes start a new future measurement segment and preserve historical totals. Completing this step saves the complete configuration.",
+        "title": "Configure CO₂ factors"
       },
       "separate_load": {
         "data": {

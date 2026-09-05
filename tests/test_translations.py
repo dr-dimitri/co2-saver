@@ -79,7 +79,6 @@ async def test_flow_translations(
         "publication_skew",
         "invalid_source",
         "invalid_source_vector",
-        "setup_incomplete",
         "invalid_battery_choice",
         "battery_confirmation_required",
         "invalid_battery_identity",
@@ -135,7 +134,12 @@ async def test_consumer_translations(
             "consumer_measurement_confirmed",
         ),
         "consumer_remove": ("consumer_id", "confirm_removal"),
-        "factors": (),
+        "factors": (
+            "grid_intensity_source",
+            "grid_max_age_minutes",
+            "pv_factor",
+            "battery_factor",
+        ),
     }
     for step, fields in step_fields.items():
         assert translated[f"{prefix}.step.{step}.title"]
@@ -162,9 +166,23 @@ async def test_consumer_translations(
         "invalid_source_vector",
         "source_unavailable",
         "required",
-        "setup_incomplete",
+        "factor_out_of_range",
+        "invalid_grid_unit",
+        "invalid_grid_value",
+        "grid_source_stale",
+        "grid_age_out_of_range",
+        "invalid_measurement_plan",
+        "storage_failed",
     ):
         assert translated[f"{prefix}.error.{error}"]
+    for reason in (
+        "already_configured",
+        "already_in_progress",
+        "configuration_changed",
+        "reconfigure_successful",
+        "options_saved",
+    ):
+        assert translated[f"{prefix}.abort.{reason}"]
     selectors = await async_get_translations(hass, language, "selector", {DOMAIN})
     for selector, choices in {
         "consumption_mode": ("aggregate_shares", "separate_meters"),
