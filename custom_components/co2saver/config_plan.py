@@ -304,7 +304,7 @@ def segment_fingerprint(draft: Mapping[str, object]) -> str:
     consumption = cast("dict[str, object]", plan["consumption"])
     for consumer in cast("list[dict[str, str]]", consumption["consumers"]):
         consumer.pop("name")
-    plan.update(fingerprint_version=1, adr_version="2.1", accounting_version=1)
+    plan.update(fingerprint_version=1, adr_version="2.2", accounting_version=1)
     canonical = json.dumps(
         plan, sort_keys=True, separators=(",", ":"), ensure_ascii=True
     )
