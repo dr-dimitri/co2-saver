@@ -25,3 +25,10 @@ async def async_unload_entry(hass: HomeAssistant, entry: Co2SaverConfigEntry) ->
     from .runtime import async_unload_entry as unload  # noqa: PLC0415
 
     return await unload(hass, entry)
+
+
+async def async_migrate_entry(hass: HomeAssistant, entry: Co2SaverConfigEntry) -> bool:
+    """Load explicit version validation only for Home Assistant's migration hook."""
+    from .migration import async_migrate_entry as migrate  # noqa: PLC0415
+
+    return await migrate(hass, entry)

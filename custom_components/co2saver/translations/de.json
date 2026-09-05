@@ -298,6 +298,50 @@
       }
     }
   },
+  "issues": {
+    "configuration_invalid": {
+      "description": "Die Konfiguration für {name} ist unvollständig, ungültig oder verwendet eine nicht unterstützte Version. Prüfe die Integrationseinstellungen und die installierte Version. Die Auswertung bleibt angehalten; gespeicherte Ergebnisse werden nicht durch null ersetzt.",
+      "title": "CO2-Saver-Konfiguration muss geprüft werden"
+    },
+    "sources_changed": {
+      "description": "Eine für {name} erforderliche Quelle wurde entfernt oder deaktiviert. Öffne die Integrationseinstellungen und konfiguriere die Quelle neu. Die Auswertung ist angehalten; bisherige Summen bleiben erhalten. Quellenname und Entity ID beweisen nicht, dass ein Ersatz denselben physischen Energiefluss misst.",
+      "title": "Konfigurierte Energie- oder CO₂-Quelle geändert"
+    },
+    "storage_integrity": {
+      "description": "CO2 Saver kann die gespeicherte Bilanz für {name} nicht sicher lesen oder verifizieren. Die Auswertung ist zum Schutz der vorhandenen Daten angehalten. Versuche zuerst, die bestehende Generation erneut zu laden. Ein Reset verlangt eine ausdrückliche Bestätigung nach Prüfung der Datenverlust- und Statistikfolgen.",
+      "fix_flow": {
+        "abort": {
+          "already_repaired": "Die gespeicherte Bilanz ist bereits wieder verfügbar.",
+          "entry_missing": "Die betroffene CO2-Saver-Konfiguration ist nicht mehr vorhanden.",
+          "unknown_issue": "Diese Reparatur wird nicht unterstützt."
+        },
+        "error": {
+          "confirmation_required": "Bestätige das Zurücksetzen der Bilanz ausdrücklich, bevor du fortfährst.",
+          "reload_failed": "Die Integration wurde noch nicht erfolgreich geladen. Behebe das gemeldete Problem und versuche das Laden erneut.",
+          "repair_failed": "Die Reparatur konnte nicht vollständig ausgeführt und verifiziert werden. Die Meldung bleibt offen; prüfe den lokalen Speicher und versuche vor einem weiteren Reset zunächst das erneute Laden.",
+          "unload_failed": "Die Integration konnte nicht sicher angehalten werden. Es wurde kein Reset begonnen. Behebe das Unload-Problem und versuche es erneut."
+        },
+        "step": {
+          "confirm": {
+            "data": {
+              "confirm_reset": "Ich habe Sicherung, Datenverlust und Statistikfolgen geprüft und bestätige das Zurücksetzen"
+            },
+            "description": "Erstelle vor dem Fortfahren eine Sicherung von Home Assistant. Das Zurücksetzen beginnt eine neue Bilanzgeneration mit allen CO2-Saver-Ergebnissummen bei null. Der Speicherinhalt gilt danach als unbekannt und erhält keine PV-Gutschrift, bis Messungen seine Herkunft wieder beweisen. Die erste gültige Messung bildet eine neue Baseline; Datenlücken werden nie geschätzt.\n\nVorhandene Generationsdateien bleiben zur manuellen Wiederherstellung erhalten. Ein vorhandenes unlesbares Manifest wird gesichert und überprüft; alte Generationen werden niemals erraten oder automatisch neu zugeordnet. Die Sensoridentitäten bleiben gleich. Recorder behält frühere Historie und führt die Statistik in einem neuen Zählerzyklus fort; Netto-Sensoren veröffentlichen einen neuen last_reset-Zeitpunkt, damit der Reset nicht als negative Ersparnis zählt.\n\nBestätige nur, wenn du diese Folgen akzeptierst. Abbrechen dieses Schritts setzt die Bilanz nicht zurück.\n\nEine bereits begonnene, noch nicht abgeschlossene Reparatur wird dauerhaft gespeichert und auch nach einem Neustart oder in einem neuen Dialog mit derselben Generation fortgesetzt. Ein fehlgeschlagener Ladeversuch löst keinen weiteren Reset aus.",
+            "title": "Zurücksetzen der Bilanz bestätigen"
+          },
+          "init": {
+            "description": "Versuche zunächst, die bestehende Bilanz ohne Reset erneut zu laden. Falls sie nicht wiederhergestellt werden kann, prüfe die getrennte Option zum Zurücksetzen.",
+            "menu_options": {
+              "confirm": "Zurücksetzen der Bilanz prüfen",
+              "retry": "Ohne Reset erneut laden"
+            },
+            "title": "Gespeicherte CO₂-Bilanz reparieren"
+          }
+        }
+      },
+      "title": "Gespeicherte CO₂-Bilanz muss geprüft werden"
+    }
+  },
   "options": {
     "abort": {
       "already_configured": "Diese Netzgrenze ist bereits einer CO2-Saver-Anlage zugeordnet.",

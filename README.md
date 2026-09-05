@@ -157,7 +157,8 @@ Segment. Historische Summen und der unveränderliche Store-Locator bleiben erhal
 
 Ein fehlender, beschädigter oder fremder Zustand wird niemals automatisch auf
 null gesetzt. Setup bleibt dann ohne Listener und Ergebniswerte angehalten.
-Der bestätigte Reparaturweg folgt in Issue #12. Entfernte Quellen verlangen eine
+Home Assistant zeigt eine Reparaturmeldung mit einem erneuten Ladeversuch und
+einem gesondert zu bestätigenden Reset. Entfernte Quellen verlangen eine
 Neukonfiguration; Umbenennungen werden über ihre stabile Registry-ID aufgelöst.
 
 ## Eingabemodelle
@@ -282,7 +283,64 @@ ausdrücklich bestätigter Reparaturreset erzeugt gemäß dem Vertrag eine neue
 Generation unter denselben Entity-Identitäten. `total_increasing` beginnt dann
 einen neuen Zählerzyklus; Netto-Sensoren veröffentlichen den gespeicherten
 Reparaturzeitpunkt als `last_reset`, damit der Reset nicht als negative Ersparnis
-gezählt wird. Der Reparaturdialog folgt in Issue #12.
+gezählt wird.
+
+## Betrieb, Diagnose und Reparatur
+
+Konfiguration, Manifest und Bilanzgeneration sind versioniert. Bekannte ältere
+Formate werden nur deterministisch in das unterstützte Format übernommen;
+geänderte Dateien werden atomar gespeichert und frisch zurückgelesen. Eine
+unbekannte neuere Version oder ein ungültiger Inhalt wird nicht als leerer
+Erststart behandelt. Der betroffene Eintrag bleibt angehalten, während andere
+Anlagen weiterarbeiten können. Entfernte oder deaktivierte Quellen sowie eine
+inkompatible Konfiguration erhalten eigene Reparaturmeldungen und verlangen
+eine Korrektur der Einstellungen statt eines Bilanzresets.
+
+Bei ungültigen laufenden Messungen erscheinen begrenzte Qualitätsmeldungen im
+Home-Assistant-Protokoll, ohne Rohmesswerte oder Quellenidentitäten auszugeben.
+Wiederholte Störungen erzeugen höchstens alle 15 Minuten eine Qualitätswarnung.
+Ein Fehler beim Speichern oder Verifizieren stoppt weitere Buchungen und meldet
+den Handlungsbedarf über **Reparaturen**.
+
+Die Reparatur einer gespeicherten Bilanz bietet zuerst **Ohne Reset erneut
+laden** an. Damit wird ausschließlich die bestehende Generation erneut geprüft.
+Erst die getrennte Reset-Option erklärt die Folgen und verlangt eine ausdrücklich
+aktivierte Bestätigung. **Erstelle vor einem Reset eine vollständige Sicherung
+von Home Assistant.** Abbrechen der Bestätigung verändert die Bilanz nicht.
+
+Ein bestätigter Reset beginnt eine neue Generation mit Ergebnissummen bei null,
+einer neuen Messbaseline und konservativ unbekannter Speicherherkunft. Alte
+Generationsdateien bleiben zur manuellen Wiederherstellung erhalten. Ein
+vorhandenes unlesbares Manifest wird vor dem Ersatz unverändert gesichert und
+die Sicherung geprüft; bereits vorhandene Korruptdateien bleiben erhalten.
+Ohne gültige Zuordnung wird keine Altgeneration erraten oder automatisch
+wiederhergestellt. Ein Konflikt mit einem anderen Eintrag verhindert das
+Überschreiben. Die Sensoridentitäten und frühere Recorder-Historie bleiben
+erhalten; die Statistik beginnt den oben beschriebenen neuen Zählerzyklus.
+Die Reparatur gilt erst als erfolgreich, wenn die neue oder wieder geladene
+Generation verifiziert ist und der vollständig abgewartete Reload den Eintrag
+erfolgreich geladen hat. Bei einem Fehler bleibt die Meldung offen.
+Eine begonnene Reparatur bleibt dauerhaft im Manifest markiert, bis dieser
+Abschluss verifiziert wurde. Nach einem Neustart oder in einem neuen Dialog wird
+dieselbe Reparaturgeneration fortgeführt; ein fehlgeschlagener Ladeversuch löst
+keinen weiteren Reset aus.
+
+Über das Menü des Integrationseintrags lässt sich eine **Diagnosedatei**
+herunterladen, auch wenn Setup noch keine Laufzeit erzeugen konnte. Sie enthält
+ausschließlich Messtopologie, Verbrauchsmodus, Speicher vorhanden/abwesend,
+Versionsangaben, Betriebs- und Messphase, das letzte akzeptierte Periodenende,
+Quellenrollen und bereits bekannte Einheiten, begrenzte Diagnosezähler sowie
+Angaben dazu, ob ein Herkunftskonto vorhanden oder in Quarantäne ist. Ohne
+gespeicherte Beobachtung bleiben Einheiten unbekannt; die aktuelle CO₂-Quelle
+wird für die Diagnose nicht zusätzlich gelesen.
+
+Namen und Identitäten werden geschwärzt. Rohzähler, Energie- und Emissionssummen,
+Kapazität, Standort, Dateipfade und Messhistorien werden nicht exportiert. Die
+Diagnose liest weder Quellen noch Speicherdateien erneut und verändert keine
+Bilanz. CO2 Saver arbeitet lokal, betreibt keine Telemetrie und überträgt keine
+Daten an externe Dienste. Die konfigurierte Energie- oder CO₂-Quellintegration
+kann eigene Datenverbindungen besitzen; CO2 Saver liest deren vorhandene
+Home-Assistant-Zustände.
 
 ## Fachlicher Kern
 

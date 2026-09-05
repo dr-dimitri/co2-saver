@@ -25,6 +25,7 @@ from .const import DOMAIN
 from .domain import Energy, StorageLedger
 from .measurement.models import MeasurementPipelineState
 from .measurement.storage import VerifiedAtomicStore, VerifiedAtomicStoreError
+from .migration import ManifestPayloadMigrator
 from .persistence import (
     CumulativeTotals,
     GenerationCodec,
@@ -70,7 +71,7 @@ def generation_key(storage_id: str, generation: str) -> str:
 
 
 def manifest_store(
-    hass: HomeAssistant, storage_id: str
+    hass: HomeAssistant, storage_id: str, *, owner_entry_id: str | None = None
 ) -> VerifiedAtomicStore[Manifest]:
     """Build a strict atomic store for the expected manifest locator."""
     return VerifiedAtomicStore(
@@ -78,6 +79,7 @@ def manifest_store(
         manifest_key(storage_id),
         codec=ManifestCodec(storage_id),
         revision_policy=ManifestRevisionPolicy(),
+        payload_migrator=ManifestPayloadMigrator(storage_id, owner_entry_id),
     )
 
 
@@ -157,6 +159,13 @@ def _initial_generation(
     entry: ConfigEntry, manifest: Manifest, plan: Mapping[str, object]
 ) -> GenerationState:
     """Create the full zero state only after physical absence was established."""
+    diagnostics = {
+        "discarded_intervals": 0,
+        "missing_grid_intensity": 0,
+        "segment_transitions": 0,
+    }
+    if manifest.manifest_lost:
+        diagnostics["manifest_losses"] = 1
     return GenerationState(
         storage_id=manifest.storage_id,
         owner_entry_id=entry.entry_id,
@@ -172,6 +181,8 @@ def _initial_generation(
             (consumer_id, CumulativeTotals())
             for consumer_id in consumer_ids(entry.data)
         ),
+        diagnostics=tuple(sorted(diagnostics.items())),
+        repair_reset_at=manifest.repair_reset_at,
     )
 
 
@@ -215,12 +226,29 @@ async def _load_manifest(
     hass: HomeAssistant, entry: ConfigEntry, storage_id: str
 ) -> tuple[VerifiedAtomicStore[Manifest], Manifest]:
     """Require an existing valid manifest, then bind its collision-free owner."""
-    adapter = manifest_store(hass, storage_id)
+    adapter = manifest_store(hass, storage_id, owner_entry_id=entry.entry_id)
     names = await _async_physical_files(hass, adapter.store_key)
     if any(name.startswith(f"{adapter.store_key}.corrupt") for name in names):
-        message = "manifest has a corrupt-file marker"
-        raise VerifiedAtomicStoreError(message)
-    manifest = await adapter.async_load()
+        # Retained corruption is superseded only by a canonical manifest with
+        # evidence of confirmed repair. A legacy migration cannot grant that
+        # authority and must not write while the corruption marker is active.
+        manifest = None
+        if adapter.store_key in names:
+            manifest = await VerifiedAtomicStore(
+                hass,
+                adapter.store_key,
+                codec=ManifestCodec(storage_id),
+                revision_policy=ManifestRevisionPolicy(),
+            ).async_load()
+        if (
+            manifest is None
+            or manifest.repair_reset_at is None
+            or not (manifest.manifest_lost or manifest.previous_generations)
+        ):
+            message = "manifest has a corrupt-file marker"
+            raise VerifiedAtomicStoreError(message)
+    else:
+        manifest = await adapter.async_load()
     if manifest is None:
         message = "authoritative manifest is missing or corrupt"
         raise VerifiedAtomicStoreError(message)
@@ -259,6 +287,11 @@ async def _load_generation(
         state = await adapter.async_initialize_confirmed_absent(
             _initial_generation(entry, manifest, plan)
         )
+    if state.repair_reset_at != manifest.repair_reset_at or dict(state.diagnostics).get(
+        "manifest_losses", 0
+    ) != int(manifest.manifest_lost):
+        message = "generation repair metadata does not match its manifest"
+        raise VerifiedAtomicStoreError(message)
     return adapter, state
 
 

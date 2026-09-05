@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
+from datetime import timedelta
 from typing import TYPE_CHECKING
 
 from homeassistant.const import Platform
@@ -25,9 +26,14 @@ from .flow_commit import async_release_visible_create
 from .measurement.ha import HomeAssistantEnergyReader, UtcMinuteRunner
 from .measurement.models import MeasurementPhase
 from .measurement.storage import VerifiedAtomicStoreError
+from .repair_issues import (
+    async_clear_setup_issues,
+    async_report_configuration_issue,
+    async_report_source_issue,
+    async_report_storage_issue,
+)
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
     from datetime import datetime
 
     from homeassistant.config_entries import ConfigEntry
@@ -51,13 +57,34 @@ class EntryRuntime(PersistedRuntime):
     status: str = "awaiting_observation"
     failed: bool = False
     update_signal: str = ""
+    last_warning_at: datetime | None = None
+
+
+def _log_quality(
+    runtime: EntryRuntime, previous_status: str, observed_at: datetime
+) -> None:
+    """Bound recurring quality warnings without logging any raw measurements."""
+    if runtime.available:
+        if previous_status != "ok" and runtime.last_warning_at is not None:
+            _LOGGER.info("CO2 Saver inputs are valid again")
+        return
+    if runtime.status.startswith("awaiting_"):
+        return
+    if (
+        runtime.last_warning_at is None
+        or observed_at - runtime.last_warning_at >= timedelta(minutes=15)
+    ):
+        _LOGGER.warning(
+            "CO2 Saver input quality prevents valuation: %s", runtime.status
+        )
+        runtime.last_warning_at = observed_at
 
 
 def _start_runner(
-    hass: HomeAssistant, runtime: EntryRuntime, data: Mapping[str, object]
+    hass: HomeAssistant, runtime: EntryRuntime, entry: Co2SaverConfigEntry
 ) -> None:
     """Bind immutable configuration and one synchronous CO₂ read to each tick."""
-    plan = EvaluationPlan.from_config(data)
+    plan = EvaluationPlan.from_config(entry.data)
     energy_reader = HomeAssistantEnergyReader(hass, runtime.state.measurement.sources)
     grid_reader = HomeAssistantGridIntensityReader(hass, plan.grid_source_registry_id)
 
@@ -90,8 +117,9 @@ def _start_runner(
             runtime.available = False
             runtime.status = "storage_error"
             runner.request_stop()
+            async_report_storage_issue(hass, entry)
             async_dispatcher_send(hass, runtime.update_signal)
-            _LOGGER.exception(
+            _LOGGER.error(  # noqa: TRY400 - bounded error type, no persisted raw data
                 "CO2 Saver stopped after an unverifiable state commit (%s)",
                 type(err).__name__,
             )
@@ -113,6 +141,7 @@ def _start_runner(
                 else committed.measurement.phase.value
             )
         runtime.available = runtime.status == "ok"
+        _log_quality(runtime, previous[2], observed_at)
         if previous != (runtime.state, runtime.available, runtime.status):
             async_dispatcher_send(hass, runtime.update_signal)
 
@@ -138,6 +167,21 @@ def _validated_sources(
     return sources
 
 
+def _sources_for_setup(
+    hass: HomeAssistant, entry: Co2SaverConfigEntry
+) -> tuple[str, ...]:
+    """Distinguish source/configuration failures from damaged accounting data."""
+    try:
+        return _validated_sources(hass, entry)
+    except (KeyError, ValueError) as err:
+        async_report_configuration_issue(hass, entry)
+        message = "CO2 Saver configuration is invalid or incompatible"
+        raise ConfigEntryError(message) from err
+    except ConfigEntryError:
+        async_report_source_issue(hass, entry)
+        raise
+
+
 @callback
 def _keep_registry_identity(_entity_id: str) -> None:
     """Registry UUIDs are authoritative; entity-ID renames change no settings."""
@@ -149,13 +193,14 @@ async def async_setup_entry(
 ) -> bool:
     """Bind and verify storage before registering source lifecycle callbacks."""
     await async_release_visible_create(hass, entry)
+    _sources_for_setup(hass, entry)
     try:
-        _validated_sources(hass, entry)
         persisted = await async_setup_storage(hass, entry)
-        sources = _validated_sources(hass, entry)
     except (KeyError, OSError, ValueError, VerifiedAtomicStoreError) as err:
-        message = "CO2 Saver configuration or stored state is invalid"
+        async_report_storage_issue(hass, entry)
+        message = "CO2 Saver stored state is invalid; see Repairs"
         raise ConfigEntryError(message) from err
+    sources = _sources_for_setup(hass, entry)
     runtime = EntryRuntime(
         store=persisted.store,
         state=persisted.state,
@@ -179,7 +224,8 @@ async def async_setup_entry(
             )
         )
     await hass.config_entries.async_forward_entry_setups(entry, _PLATFORMS)
-    _start_runner(hass, runtime, entry.data)
+    _start_runner(hass, runtime, entry)
+    async_clear_setup_issues(hass, entry)
     return True
 
 
@@ -195,5 +241,5 @@ async def async_unload_entry(
         runtime.available = False
         return True
     if runtime.runner is not None and not runtime.failed:
-        _start_runner(hass, runtime, entry.data)
+        _start_runner(hass, runtime, entry)
     return False

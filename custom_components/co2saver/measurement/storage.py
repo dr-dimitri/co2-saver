@@ -8,6 +8,7 @@ from __future__ import annotations
 import asyncio
 import inspect
 from copy import deepcopy
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from fractions import Fraction
 from typing import TYPE_CHECKING, Never, Protocol, cast
@@ -86,6 +87,14 @@ class RevisionPolicy[T](Protocol):
         """Reject a semantically invalid transition between adjacent revisions."""
 
 
+@dataclass(frozen=True, slots=True)
+class PayloadMigration[T]:
+    """One validated old-format revision and its complete current-format successor."""
+
+    previous_revision: int
+    state: T
+
+
 class MeasurementStateCodecError(ValueError):
     """Reject a structurally or semantically invalid persisted payload."""
 
@@ -104,6 +113,10 @@ class VerifiedAtomicStoreConflictError(VerifiedAtomicStoreError):
 
 class VerifiedAtomicStoreVerificationError(VerifiedAtomicStoreError):
     """Reject a save whose fresh read-back is absent or different."""
+
+
+class VerifiedAtomicStorePayloadError(VerifiedAtomicStoreVerificationError):
+    """Reject an existing payload whose decoded state is not canonical and stable."""
 
 
 def _raise_codec(
@@ -459,7 +472,7 @@ class _StrictAtomicStore(Store[dict[str, object]]):
         old_minor_version: int,
         old_data: dict[str, object],
     ) -> dict[str, object]:
-        """Reject migration because Issue #4 defines no migration path."""
+        """Reject every container mismatch independently of payload migrations."""
         del old_data
         message = (
             f"store version {old_major_version}.{old_minor_version} is not "
@@ -478,6 +491,7 @@ class VerifiedAtomicStore[T]:
         *,
         codec: StateCodec[T],
         revision_policy: RevisionPolicy[T],
+        payload_migrator: Callable[[object], PayloadMigration[T] | None] | None = None,
     ) -> None:
         """Bind a complete-state codec and policy to one injected physical key."""
         if (
@@ -490,6 +504,7 @@ class VerifiedAtomicStore[T]:
         self._hass = hass
         self._codec = codec
         self._revision_policy = revision_policy
+        self._payload_migrator = payload_migrator
         self.store_key = store_key
         locks = hass.data.setdefault(_STORE_LOCKS, {})
         self._lock = locks.setdefault(store_key, asyncio.Lock())
@@ -531,17 +546,17 @@ class VerifiedAtomicStore[T]:
         canonical_payload = self._codec.encode(state)
         if type(canonical_payload) is not dict:
             message = "state codec must encode a JSON object"
-            raise VerifiedAtomicStoreVerificationError(message)
+            raise VerifiedAtomicStorePayloadError(message)
         if canonical_payload != unchanged_payload:
             message = "loaded state payload is not canonical"
-            raise VerifiedAtomicStoreVerificationError(message)
+            raise VerifiedAtomicStorePayloadError(message)
         round_tripped = self._codec.decode(deepcopy(canonical_payload))
         if round_tripped != state:
             message = "loaded state does not round-trip through its codec"
-            raise VerifiedAtomicStoreVerificationError(message)
+            raise VerifiedAtomicStorePayloadError(message)
         if self._revision(round_tripped) != self._revision(state):
             message = "loaded state revision changes during codec round-trip"
-            raise VerifiedAtomicStoreVerificationError(message)
+            raise VerifiedAtomicStorePayloadError(message)
         return state
 
     def _preflight(self, state: T) -> tuple[dict[str, object], T, int]:
@@ -591,11 +606,74 @@ class VerifiedAtomicStore[T]:
             raise VerifiedAtomicStoreVerificationError(message)
         return actual_state
 
+    async def _load_state_unlocked(self) -> T | None:
+        """Migrate only known payloads and verify the result before publishing it."""
+        payload = await self._load_payload_unlocked()
+        if payload is None:
+            return None
+        if self._payload_migrator is not None:
+            migration_input = deepcopy(payload)
+            proposed: object = self._payload_migrator(migration_input)
+            if inspect.isawaitable(proposed):
+                if inspect.iscoroutine(proposed):
+                    proposed.close()
+                message = "payload migrator must be synchronous"
+                raise TypeError(message)
+            if migration_input != payload:
+                message = "payload migrator must not mutate its input"
+                raise VerifiedAtomicStoreConflictError(message)
+            if proposed is not None:
+                if not isinstance(proposed, PayloadMigration):
+                    message = "payload migrator must return a PayloadMigration"
+                    raise VerifiedAtomicStoreVerificationError(message)
+                migration = cast("PayloadMigration[T]", proposed)
+                previous_revision = migration.previous_revision
+                if (
+                    type(previous_revision) is not int
+                    or previous_revision < 0
+                    or self._revision(migration.state) != previous_revision + 1
+                ):
+                    message = "payload migration must advance one revision"
+                    raise VerifiedAtomicStoreConflictError(message)
+                encoded, canonical, revision = self._preflight(migration.state)
+                return await self._save_and_verify_unlocked(
+                    encoded, canonical, revision
+                )
+        return self._decode_canonical(payload)
+
     async def async_load(self) -> T | None:
-        """Load a state, returning ``None`` without creating a replacement."""
+        """Load or migrate known state without ever replacing missing/invalid state."""
         async with self._lock:
-            payload = await self._load_payload_unlocked()
-            return None if payload is None else self._decode_canonical(payload)
+            return await self._load_state_unlocked()
+
+    async def async_replace_confirmed_unreadable(self, state: T) -> T:
+        """Replace unreadable state after explicit repair, collision and backup checks.
+
+        The caller must hold its domain repair lock, confirm the destructive
+        repair, preserve existing bytes, and inject a dedicated initial policy.
+        A now-readable current state always blocks replacement. Payload migration
+        is deliberately disabled here and during the strict post-save read-back.
+        """
+        async with self._lock:
+            self._revision_policy.validate_initial(state)
+            encoded, canonical, revision = self._preflight(state)
+            try:
+                existing_payload = await self._load_payload_unlocked()
+                existing = (
+                    None
+                    if existing_payload is None
+                    else self._decode_canonical(existing_payload)
+                )
+            except (
+                ValueError,
+                VerifiedAtomicStorePayloadError,
+                VerifiedAtomicStoreVersionError,
+            ):
+                existing = None
+            if existing is not None:
+                message = "readable state must not be replaced as unreadable"
+                raise VerifiedAtomicStoreConflictError(message)
+            return await self._save_and_verify_unlocked(encoded, canonical, revision)
 
     async def async_initialize_confirmed_absent(
         self,
@@ -625,12 +703,11 @@ class VerifiedAtomicStore[T]:
     ) -> T:
         """Apply one pure synchronous transition and publish only after verify."""
         async with self._lock:
-            current_payload = await self._load_payload_unlocked()
-            if current_payload is None:
+            before = await self._load_state_unlocked()
+            if before is None:
                 message = "store is missing; initialize it explicitly"
                 raise VerifiedAtomicStoreConflictError(message)
-            unchanged_payload = deepcopy(current_payload)
-            before = self._decode_canonical(deepcopy(unchanged_payload))
+            unchanged_payload = self._codec.encode(before)
             transform_input = self._decode_canonical(deepcopy(unchanged_payload))
             proposed_object: object = transform(transform_input)
             if inspect.isawaitable(proposed_object):
@@ -663,11 +740,13 @@ class VerifiedAtomicStore[T]:
 
 __all__ = (
     "MeasurementStateCodecError",
+    "PayloadMigration",
     "RevisionPolicy",
     "StateCodec",
     "VerifiedAtomicStore",
     "VerifiedAtomicStoreConflictError",
     "VerifiedAtomicStoreError",
+    "VerifiedAtomicStorePayloadError",
     "VerifiedAtomicStoreVerificationError",
     "VerifiedAtomicStoreVersionError",
     "decode_measurement_state",

@@ -379,7 +379,9 @@ async def test_invalid_payloads_never_mutate_stores(
         if kind == "manifest"
         else GenerationCodec.encode(runtime.state)
     )
-    payload[mutation] = "f" * 32 if mutation == "storage_id" else 2
+    payload[mutation] = (
+        "f" * 32 if mutation == "storage_id" else int(payload.get(mutation, 1)) + 1
+    )
     await Store(hass, 1, key, minor_version=1, atomic_writes=True).async_save(payload)
     before = deepcopy(hass_storage)
     with pytest.raises(ValueError, match=r"unsupported|foreign|unexpected"):

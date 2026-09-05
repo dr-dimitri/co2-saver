@@ -109,6 +109,10 @@ def test_manifest_round_trip_preserves_the_authoritative_pointer() -> None:
             initialized=True,
             previous_generations=(_OTHER,),
             commit_revision=3,
+            repair_reset_at=_BOUNDARY,
+            manifest_lost=True,
+            repair_pending=True,
+            repair_issue_token=_OTHER,
         ),
     ):
         assert codec.decode(codec.encode(state)) == state
@@ -118,7 +122,7 @@ def test_manifest_round_trip_preserves_the_authoritative_pointer() -> None:
     ("field", "value", "message"),
     [
         ("schema_version", True, "schema"),
-        ("minor_version", 2, "schema"),
+        ("minor_version", 3, "schema"),
         ("storage_id", _OTHER, "foreign"),
         ("manifest_epoch", "not-hex", "storage identifier"),
         ("owner_entry_id", "", "non-empty"),
@@ -129,6 +133,14 @@ def test_manifest_round_trip_preserves_the_authoritative_pointer() -> None:
         ("initialized", 1, "boolean"),
         ("commit_revision", 0, "positive"),
         ("commit_revision", True, "integer"),
+        ("repair_reset_at", "2026-09-05T12:00:00Z", "repair requires an owner"),
+        ("repair_reset_at", "invalid", "must end in Z"),
+        ("manifest_lost", 1, "must be boolean"),
+        ("manifest_lost", True, "repair requires an owner"),
+        ("repair_pending", 1, "must be boolean"),
+        ("repair_pending", True, "requires a reset timestamp"),
+        ("repair_issue_token", "invalid", "storage identifier"),
+        ("repair_issue_token", _OTHER, "requires a reset"),
         ("extension", "value", "unexpected keys"),
     ],
 )
@@ -149,6 +161,10 @@ def test_manifest_rejects_malformed_and_foreign_fields(
         {"owner_entry_id": "owner"},
         {"initialized": True},
         {"previous_generations": (_OTHER,)},
+        {"repair_reset_at": _BOUNDARY},
+        {"manifest_lost": True},
+        {"repair_pending": True},
+        {"repair_issue_token": _OTHER},
     ],
 )
 def test_initial_manifest_requires_pristine_reservation(
@@ -180,6 +196,10 @@ def test_manifest_policy_accepts_binding_then_initialization() -> None:
         {"initialized": False},
         {"owner_entry_id": None},
         {"owner_entry_id": "foreign"},
+        {"repair_reset_at": _BOUNDARY},
+        {"manifest_lost": True},
+        {"repair_pending": True},
+        {"repair_issue_token": _OTHER},
     ],
 )
 def test_manifest_policy_rejects_identity_replacement(
