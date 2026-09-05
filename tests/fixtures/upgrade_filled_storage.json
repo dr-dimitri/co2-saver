@@ -1,0 +1,113 @@
+{
+  "config_entry": {
+    "data": {
+      "battery": {
+        "battery_id": "cccccccccccccccccccccccccccccccc",
+        "charge_source": "037aac63c802f3f0b5ed7578fd7268a0",
+        "discharge_source": "1b127132fc177a93f35f39f23f143f92",
+        "round_trip_efficiency": "0.9",
+        "usable_capacity_kwh": "10"
+      },
+      "consumption": {
+        "consumers": [
+          {
+            "consumer_id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "name": "Wallbox",
+            "share": "0.25"
+          }
+        ],
+        "household_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "household_source": "c45020da2434a80ca012a743c832fe47",
+        "mode": "aggregate_shares"
+      },
+      "factors": {
+        "battery_factor": "20",
+        "grid_intensity_source": "b113499a8277ecbec8ae52ebe56a4d8a",
+        "grid_max_age_minutes": 60,
+        "pv_factor": "40"
+      },
+      "plant_key": "grid:b2b372fd14b8fb20fa6bcc10e3319a56:dba89dcd601dea856a1d03fdb458cba3",
+      "sources": {
+        "grid_export": "dba89dcd601dea856a1d03fdb458cba3",
+        "grid_import": "b2b372fd14b8fb20fa6bcc10e3319a56",
+        "pv_generation": "558f4ad4b197a8a20e705b52d711b6d4"
+      },
+      "storage_id": "63cf6b931bb84c4cb634e77a06a86661",
+      "synchronous_sources_confirmed": true,
+      "topology": "inverter"
+    },
+    "domain": "co2saver",
+    "entry_id": "01M1RF05VARAT5W1MXM0RSC1GP",
+    "minor_version": 1,
+    "options": {},
+    "source": "user",
+    "title": "CO2 Saver",
+    "version": 1
+  },
+  "counters": {
+    "charge": "103",
+    "discharge": "111",
+    "grid_export": "101",
+    "grid_import": "100",
+    "load": "113",
+    "pv_generation": "106",
+    "wallbox": "100"
+  },
+  "integration_tree": "193ff9f72ea89c1804eb0e57a1c7442981601833",
+  "period_end": "2026-09-05T12:04:00+00:00",
+  "source_commit": "e77c740201b6565c3cd43ff2894e742b2a2706e9",
+  "sources": {
+    "charge": {
+      "entity_id": "sensor.runtime_charge",
+      "id": "037aac63c802f3f0b5ed7578fd7268a0",
+      "platform": "runtime_test",
+      "unique_id": "charge"
+    },
+    "discharge": {
+      "entity_id": "sensor.runtime_discharge",
+      "id": "1b127132fc177a93f35f39f23f143f92",
+      "platform": "runtime_test",
+      "unique_id": "discharge"
+    },
+    "grid_co2": {
+      "entity_id": "sensor.runtime_grid_co2",
+      "id": "b113499a8277ecbec8ae52ebe56a4d8a",
+      "platform": "runtime_test",
+      "unique_id": "grid_co2"
+    },
+    "grid_export": {
+      "entity_id": "sensor.runtime_grid_export",
+      "id": "dba89dcd601dea856a1d03fdb458cba3",
+      "platform": "runtime_test",
+      "unique_id": "grid_export"
+    },
+    "grid_import": {
+      "entity_id": "sensor.runtime_grid_import",
+      "id": "b2b372fd14b8fb20fa6bcc10e3319a56",
+      "platform": "runtime_test",
+      "unique_id": "grid_import"
+    },
+    "load": {
+      "entity_id": "sensor.runtime_load",
+      "id": "c45020da2434a80ca012a743c832fe47",
+      "platform": "runtime_test",
+      "unique_id": "load"
+    },
+    "pv_generation": {
+      "entity_id": "sensor.runtime_pv_generation",
+      "id": "558f4ad4b197a8a20e705b52d711b6d4",
+      "platform": "runtime_test",
+      "unique_id": "pv_generation"
+    },
+    "wallbox": {
+      "entity_id": "sensor.runtime_wallbox",
+      "id": "dba1ca3e0638cd2febca52c081f69e88",
+      "platform": "runtime_test",
+      "unique_id": "wallbox"
+    }
+  },
+  "stores": {
+    "co2saver.63cf6b931bb84c4cb634e77a06a86661.f2113cb78b374cb9b4c139488aef3209": "{\n  \"version\": 1,\n  \"minor_version\": 1,\n  \"key\": \"co2saver.63cf6b931bb84c4cb634e77a06a86661.f2113cb78b374cb9b4c139488aef3209\",\n  \"data\": {\n    \"schema_version\": 1,\n    \"minor_version\": 1,\n    \"storage_id\": \"63cf6b931bb84c4cb634e77a06a86661\",\n    \"owner_entry_id\": \"01M1RF05VARAT5W1MXM0RSC1GP\",\n    \"generation\": \"f2113cb78b374cb9b4c139488aef3209\",\n    \"commit_revision\": 5,\n    \"segment_fingerprint\": \"d7103c87c813b18ade684783f8d13d9aca030efb5c17726068765dd4c3cc5d55\",\n    \"measurement\": {\n      \"revision\": 4,\n      \"phase\": \"active\",\n      \"sources\": [\n        {\n          \"role\": \"battery_charge\",\n          \"registry_id\": \"037aac63c802f3f0b5ed7578fd7268a0\"\n        },\n        {\n          \"role\": \"battery_discharge\",\n          \"registry_id\": \"1b127132fc177a93f35f39f23f143f92\"\n        },\n        {\n          \"role\": \"grid_export\",\n          \"registry_id\": \"dba89dcd601dea856a1d03fdb458cba3\"\n        },\n        {\n          \"role\": \"grid_import\",\n          \"registry_id\": \"b2b372fd14b8fb20fa6bcc10e3319a56\"\n        },\n        {\n          \"role\": \"local_load\",\n          \"registry_id\": \"c45020da2434a80ca012a743c832fe47\"\n        },\n        {\n          \"role\": \"pv_generation\",\n          \"registry_id\": \"558f4ad4b197a8a20e705b52d711b6d4\"\n        }\n      ],\n      \"segment_transition_at\": \"2026-09-05T12:00:20Z\",\n      \"baseline\": {\n        \"samples\": [\n          {\n            \"source\": {\n              \"role\": \"battery_charge\",\n              \"registry_id\": \"037aac63c802f3f0b5ed7578fd7268a0\"\n            },\n            \"cumulative_kwh\": {\n              \"numerator\": 103,\n              \"denominator\": 1\n            },\n            \"source_unit\": \"kWh\",\n            \"period_end\": \"2026-09-05T12:04:00Z\",\n            \"last_reported\": \"2026-09-05T12:04:00Z\"\n          },\n          {\n            \"source\": {\n              \"role\": \"battery_discharge\",\n              \"registry_id\": \"1b127132fc177a93f35f39f23f143f92\"\n            },\n            \"cumulative_kwh\": {\n              \"numerator\": 111,\n              \"denominator\": 1\n            },\n            \"source_unit\": \"kWh\",\n            \"period_end\": \"2026-09-05T12:04:00Z\",\n            \"last_reported\": \"2026-09-05T12:04:00Z\"\n          },\n          {\n            \"source\": {\n              \"role\": \"grid_export\",\n              \"registry_id\": \"dba89dcd601dea856a1d03fdb458cba3\"\n            },\n            \"cumulative_kwh\": {\n              \"numerator\": 101,\n              \"denominator\": 1\n            },\n            \"source_unit\": \"kWh\",\n            \"period_end\": \"2026-09-05T12:04:00Z\",\n            \"last_reported\": \"2026-09-05T12:04:00Z\"\n          },\n          {\n            \"source\": {\n              \"role\": \"grid_import\",\n              \"registry_id\": \"b2b372fd14b8fb20fa6bcc10e3319a56\"\n            },\n            \"cumulative_kwh\": {\n              \"numerator\": 100,\n              \"denominator\": 1\n            },\n            \"source_unit\": \"kWh\",\n            \"period_end\": \"2026-09-05T12:04:00Z\",\n            \"last_reported\": \"2026-09-05T12:04:00Z\"\n          },\n          {\n            \"source\": {\n              \"role\": \"local_load\",\n              \"registry_id\": \"c45020da2434a80ca012a743c832fe47\"\n            },\n            \"cumulative_kwh\": {\n              \"numerator\": 113,\n              \"denominator\": 1\n            },\n            \"source_unit\": \"kWh\",\n            \"period_end\": \"2026-09-05T12:04:00Z\",\n            \"last_reported\": \"2026-09-05T12:04:00Z\"\n          },\n          {\n            \"source\": {\n              \"role\": \"pv_generation\",\n              \"registry_id\": \"558f4ad4b197a8a20e705b52d711b6d4\"\n            },\n            \"cumulative_kwh\": {\n              \"numerator\": 106,\n              \"denominator\": 1\n            },\n            \"source_unit\": \"kWh\",\n            \"period_end\": \"2026-09-05T12:04:00Z\",\n            \"last_reported\": \"2026-09-05T12:04:00Z\"\n          }\n        ]\n      },\n      \"candidate\": null,\n      \"recovery_after_period_end\": null\n    },\n    \"ledger\": {\n      \"capacity_kwh\": {\n        \"numerator\": 10,\n        \"denominator\": 1\n      },\n      \"stored_lower_kwh\": {\n        \"numerator\": 17,\n        \"denominator\": 10\n      },\n      \"stored_upper_kwh\": {\n        \"numerator\": 17,\n        \"denominator\": 10\n      },\n      \"pv_lower_kwh\": {\n        \"numerator\": 17,\n        \"denominator\": 10\n      },\n      \"non_pv_upper_kwh\": {\n        \"numerator\": 0,\n        \"denominator\": 1\n      },\n      \"pv_burden_g\": {\n        \"numerator\": 680,\n        \"denominator\": 9\n      },\n      \"pv_density_upper_g_per_kwh\": {\n        \"numerator\": 400,\n        \"denominator\": 9\n      }\n    },\n    \"totals\": {\n      \"direct_pv_kwh\": {\n        \"numerator\": 2,\n        \"denominator\": 1\n      },\n      \"storage_pv_kwh\": {\n        \"numerator\": 1,\n        \"denominator\": 1\n      },\n      \"direct_gross_g\": {\n        \"numerator\": 800,\n        \"denominator\": 1\n      },\n      \"direct_pv_burden_g\": {\n        \"numerator\": 80,\n        \"denominator\": 1\n      },\n      \"storage_gross_g\": {\n        \"numerator\": 500,\n        \"denominator\": 1\n      },\n      \"storage_pv_burden_g\": {\n        \"numerator\": 400,\n        \"denominator\": 9\n      },\n      \"storage_burden_g\": {\n        \"numerator\": 20,\n        \"denominator\": 1\n      },\n      \"unvalued_direct_kwh\": {\n        \"numerator\": 0,\n        \"denominator\": 1\n      },\n      \"unvalued_storage_kwh\": {\n        \"numerator\": 0,\n        \"denominator\": 1\n      }\n    },\n    \"consumer_totals\": [\n      {\n        \"consumer_id\": \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\n        \"totals\": {\n          \"direct_pv_kwh\": {\n            \"numerator\": 3,\n            \"denominator\": 2\n          },\n          \"storage_pv_kwh\": {\n            \"numerator\": 3,\n            \"denominator\": 4\n          },\n          \"direct_gross_g\": {\n            \"numerator\": 600,\n            \"denominator\": 1\n          },\n          \"direct_pv_burden_g\": {\n            \"numerator\": 60,\n            \"denominator\": 1\n          },\n          \"storage_gross_g\": {\n            \"numerator\": 375,\n            \"denominator\": 1\n          },\n          \"storage_pv_burden_g\": {\n            \"numerator\": 100,\n            \"denominator\": 3\n          },\n          \"storage_burden_g\": {\n            \"numerator\": 15,\n            \"denominator\": 1\n          },\n          \"unvalued_direct_kwh\": {\n            \"numerator\": 0,\n            \"denominator\": 1\n          },\n          \"unvalued_storage_kwh\": {\n            \"numerator\": 0,\n            \"denominator\": 1\n          }\n        }\n      },\n      {\n        \"consumer_id\": \"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\n        \"totals\": {\n          \"direct_pv_kwh\": {\n            \"numerator\": 1,\n            \"denominator\": 2\n          },\n          \"storage_pv_kwh\": {\n            \"numerator\": 1,\n            \"denominator\": 4\n          },\n          \"direct_gross_g\": {\n            \"numerator\": 200,\n            \"denominator\": 1\n          },\n          \"direct_pv_burden_g\": {\n            \"numerator\": 20,\n            \"denominator\": 1\n          },\n          \"storage_gross_g\": {\n            \"numerator\": 125,\n            \"denominator\": 1\n          },\n          \"storage_pv_burden_g\": {\n            \"numerator\": 100,\n            \"denominator\": 9\n          },\n          \"storage_burden_g\": {\n            \"numerator\": 5,\n            \"denominator\": 1\n          },\n          \"unvalued_direct_kwh\": {\n            \"numerator\": 0,\n            \"denominator\": 1\n          },\n          \"unvalued_storage_kwh\": {\n            \"numerator\": 0,\n            \"denominator\": 1\n          }\n        }\n      }\n    ],\n    \"unassigned_direct_kwh\": {\n      \"numerator\": 0,\n      \"denominator\": 1\n    },\n    \"unassigned_storage_kwh\": {\n      \"numerator\": 0,\n      \"denominator\": 1\n    },\n    \"diagnostics\": {\n      \"discarded_intervals\": 0,\n      \"missing_grid_intensity\": 0,\n      \"segment_transitions\": 0\n    },\n    \"repair_reset_at\": null\n  }\n}",
+    "co2saver.63cf6b931bb84c4cb634e77a06a86661.manifest": "{\n  \"version\": 1,\n  \"minor_version\": 1,\n  \"key\": \"co2saver.63cf6b931bb84c4cb634e77a06a86661.manifest\",\n  \"data\": {\n    \"schema_version\": 1,\n    \"minor_version\": 1,\n    \"storage_id\": \"63cf6b931bb84c4cb634e77a06a86661\",\n    \"manifest_epoch\": \"7e3226a65b8847c986bdc9b0f097b234\",\n    \"owner_entry_id\": \"01M1RF05VARAT5W1MXM0RSC1GP\",\n    \"active_generation\": \"f2113cb78b374cb9b4c139488aef3209\",\n    \"previous_generations\": [],\n    \"initialized\": true,\n    \"commit_revision\": 3\n  }\n}"
+  }
+}
