@@ -1,17 +1,16 @@
 # Copyright (C) 2026 CO2 Saver contributors
 # SPDX-License-Identifier: GPL-3.0-only
 
-"""Shared, side-effect-free consumer editor for config and options flows."""
+"""Shared consumer drafts with a final factor and persistence step."""
 
 from __future__ import annotations
 
 from copy import deepcopy
 from decimal import Decimal
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
 import voluptuous as vol
-from homeassistant.config_entries import ConfigEntryBaseFlow, ConfigFlowResult
 from homeassistant.core import valid_entity_id
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.selector import (
@@ -33,6 +32,10 @@ from .config_consumers import (
     validate_consumption_selection,
 )
 from .config_sources import energy_entity_selector, validate_energy_sources
+from .factor_flow import FactorFlowSteps
+
+if TYPE_CHECKING:
+    from homeassistant.config_entries import ConfigFlowResult
 
 _CONSUMPTION_MODES = ("aggregate_shares", "separate_meters")
 _CONSUMER_ACTIONS = ("add", "edit", "remove", "finish")
@@ -65,7 +68,7 @@ def _consumer_suggestions(
     return suggestions
 
 
-class ConsumerFlowSteps(ConfigEntryBaseFlow):
+class ConsumerFlowSteps(FactorFlowSteps):
     """Edit consumers in a detached draft; never commit incomplete choices."""
 
     def __init__(self) -> None:
@@ -435,16 +438,5 @@ class ConsumerFlowSteps(ConfigEntryBaseFlow):
                 user_input,
             ),
             errors=errors,
-            last_step=False,
-        )
-
-    async def async_step_factors(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
-        """Expose the final-flow boundary implemented by issue #8."""
-        return self.async_show_form(
-            step_id="factors",
-            data_schema=vol.Schema({}),
-            errors={"base": "setup_incomplete"} if user_input is not None else {},
             last_step=False,
         )
