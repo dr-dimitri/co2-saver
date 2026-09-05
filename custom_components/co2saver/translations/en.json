@@ -155,7 +155,13 @@
           "grid_max_age_minutes": "Maximum grid-intensity sample age (minutes)",
           "pv_factor": "PV lifecycle factor (g CO₂e/kWh)"
         },
-        "description": "Select a registered grid carbon-intensity sensor with an explicit CO₂e unit. Enter lifecycle factors explicitly as plain decimal text with a dot in g CO₂e/kWh (0 through 5000). The PV factor is per generated AC kWh; the battery factor is per credited AC kWh discharged. Changes start a new future measurement segment and preserve historical totals. Completing this step saves the complete configuration.",
+        "data_description": {
+          "battery_factor": "Battery manufacturing emissions per credited AC kWh of PV-origin energy discharged to local loads. Charging itself creates no saving or battery result booking. There is no default factor.",
+          "grid_intensity_source": "The current sensor value is read once per minute. Its publication time must be no later than the physical energy interval end. A missing, invalid, stale, or later sample leaves the energy without a CO₂ valuation; older samples are not substituted and there is no later revaluation.",
+          "grid_max_age_minutes": "Choose 1 through 1440 whole minutes; the suggested value is 60. Age is measured from the sensor’s last_reported timestamp to the physical energy interval end. A sample exactly at the limit is accepted.",
+          "pv_factor": "PV manufacturing emissions per generated AC kWh. For battery charging, the PV burden includes the modeled charging losses and is carried forward until credited local PV discharge. There is no default factor."
+        },
+        "description": "Select the grid carbon-intensity sensor and enter your lifecycle factors explicitly, using a decimal point in g CO₂e/kWh (0 through 5000). Changes to these settings start a new measurement baseline and preserve accumulated results. A configured battery’s existing contents are then treated as having unknown origin. Completing this step saves all settings.",
         "title": "Configure CO₂ factors"
       },
       "reconfigure": {
@@ -165,7 +171,7 @@
         "data_description": {
           "topology": "Choose whether PV generation is measured at the inverter or derived from the complete smart meter balance."
         },
-        "description": "Choose the topology for the proposed source replacement. This remains a draft: the existing configuration, storage locator, and historical totals stay unchanged until the complete reconfiguration flow can commit in its final step.",
+        "description": "Choose how PV generation will be measured after the source change. Existing settings and accumulated results remain unchanged until you save in the final step. Changes apply to future measurements.",
         "title": "Change measurement topology"
       },
       "separate_load": {
@@ -205,7 +211,7 @@
         "data_description": {
           "battery_present": "Choose explicitly whether this plant has a battery storage system. New setup has no default; reconfiguration only suggests the existing choice."
         },
-        "description": "Specify whether the plant has a battery storage system. This choice only extends the staged configuration draft; it does not create or change a Config Entry, Store, battery-origin ledger, listener, polling runner, or accounting result.",
+        "description": "Choose whether this plant has a battery storage system. Charging creates no CO₂ saving. Only energy proven to originate from PV and to reach local loads during discharge can receive credit. The initial battery contents have unknown origin. This choice is saved with the complete setup.",
         "title": "Choose battery storage"
       },
       "storage_sources": {
@@ -220,7 +226,7 @@
         "data_description": {
           "battery_charge": "Direction-separated cumulative energy measured at the battery's AC input while charging.",
           "battery_discharge": "Direction-separated cumulative energy measured at the battery's AC output while discharging.",
-          "battery_identity": "Required when reconfiguring an existing battery; no option is preselected. Choose replacement even if the meter entities stayed the same, because CO2 Saver cannot infer a physical replacement behind unchanged meters. Choosing the same battery keeps its internal identity; choosing replacement creates one new draft identity. The choice is not stored as a lasting flag. When the complete flow commits an effective change, it starts a prospective segment, conservatively quarantines prior battery inventory, and never recalculates history.",
+          "battery_identity": "Choose whether the physical battery is unchanged or has been replaced. Select replacement even if the meter entities stayed the same; their names cannot prove physical identity. Replacing the battery starts a new measurement baseline and treats its contents as having unknown origin. Previously recorded results are preserved.",
           "battery_sources_confirmed": "Confirm that charge and discharge use the correct separate directions and come from the same atomic physical reading as every selected PV and grid role, with exactly the same co2saver_period_end.",
           "round_trip_efficiency_percent": "Enter a plain decimal greater than 0 and no more than 100. The suggested 90% must still be visibly confirmed.",
           "usable_capacity_kwh": "Enter the usable energy available at the battery's AC output from 0.1 through 1000 kWh. There is no default."
@@ -235,7 +241,7 @@
         "data_description": {
           "topology": "Choose whether PV generation is measured at the inverter or derived from the complete smart meter balance."
         },
-        "description": "Choose how CO2 Saver obtains PV generation. This starts a staged setup; no plant is created until every configuration step is available and completed.",
+        "description": "Choose how CO2 Saver obtains PV generation. The settings are saved after you complete all setup steps.",
         "title": "Choose measurement topology"
       }
     }
@@ -329,7 +335,7 @@
             "title": "Confirm accounting reset"
           },
           "init": {
-            "description": "CO2 Saver cannot safely read or verify the stored accounting for {name}. Processing is stopped to preserve the existing data. Retry loading the existing generation first. A reset is available only with explicit confirmation after reviewing the data-loss and statistics consequences.\n\nTry loading the existing accounting again without resetting it. If the stored data cannot be recovered, review the separate reset option.",
+            "description": "CO2 Saver cannot safely read or verify the stored accounting for {name}. Processing is stopped to preserve the existing data. First retry loading the existing accounting without a reset. If it cannot be recovered, review the separate reset option and its data-loss and statistics consequences before explicitly confirming it.",
             "menu_options": {
               "confirm": "Review accounting reset",
               "retry": "Retry loading without a reset"
@@ -497,7 +503,13 @@
           "grid_max_age_minutes": "Maximum grid-intensity sample age (minutes)",
           "pv_factor": "PV lifecycle factor (g CO₂e/kWh)"
         },
-        "description": "Select a registered grid carbon-intensity sensor with an explicit CO₂e unit. Enter lifecycle factors explicitly as plain decimal text with a dot in g CO₂e/kWh (0 through 5000). The PV factor is per generated AC kWh; the battery factor is per credited AC kWh discharged. Changes start a new future measurement segment and preserve historical totals. Completing this step saves the complete configuration.",
+        "data_description": {
+          "battery_factor": "Battery manufacturing emissions per credited AC kWh of PV-origin energy discharged to local loads. Charging itself creates no saving or battery result booking. There is no default factor.",
+          "grid_intensity_source": "The current sensor value is read once per minute. Its publication time must be no later than the physical energy interval end. A missing, invalid, stale, or later sample leaves the energy without a CO₂ valuation; older samples are not substituted and there is no later revaluation.",
+          "grid_max_age_minutes": "Choose 1 through 1440 whole minutes; the suggested value is 60. Age is measured from the sensor’s last_reported timestamp to the physical energy interval end. A sample exactly at the limit is accepted.",
+          "pv_factor": "PV manufacturing emissions per generated AC kWh. For battery charging, the PV burden includes the modeled charging losses and is carried forward until credited local PV discharge. There is no default factor."
+        },
+        "description": "Select the grid carbon-intensity sensor and enter your lifecycle factors explicitly, using a decimal point in g CO₂e/kWh (0 through 5000). Changes to these settings start a new measurement baseline and preserve accumulated results. A configured battery’s existing contents are then treated as having unknown origin. Completing this step saves all settings.",
         "title": "Configure CO₂ factors"
       },
       "separate_load": {

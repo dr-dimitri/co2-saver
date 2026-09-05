@@ -155,7 +155,13 @@
           "grid_max_age_minutes": "Maximales Alter der Netz-CO₂-Probe (Minuten)",
           "pv_factor": "PV-Herstellungsfaktor (g CO₂e/kWh)"
         },
-        "description": "Wähle einen registrierten Netz-CO₂-Sensor mit eindeutiger CO₂e-Intensität. Gib die Herstellungsfaktoren ausdrücklich als Dezimaltext mit Punkt in g CO₂e/kWh an (0 bis 5000). Der PV-Faktor gilt pro erzeugter AC-kWh, der Speicherfaktor pro anrechenbar entladener AC-kWh. Änderungen beginnen ein neues zukünftiges Messsegment; historische Summen bleiben erhalten. Mit dem Abschluss wird die vollständige Konfiguration gespeichert.",
+        "data_description": {
+          "battery_factor": "Speicher-Herstellungsemissionen pro anrechenbarer AC-kWh aus PV, die zu lokalen Verbrauchern entladen wird. Beim Laden selbst entstehen weder Ersparnis noch eine Buchung des Speicher-Herstellungsanteils. Es gibt keinen Standardfaktor.",
+          "grid_intensity_source": "Der aktuelle Sensorwert wird einmal pro Minute gelesen. Sein Veröffentlichungszeitpunkt darf nicht nach dem physischen Ende des Energieintervalls liegen. Bei fehlenden, ungültigen, veralteten oder späteren Proben bleibt die Energie ohne CO₂-Bewertung; ältere Proben werden nicht ersatzweise verwendet und eine spätere Nachbewertung erfolgt nicht.",
+          "grid_max_age_minutes": "Wähle 1 bis 1440 ganze Minuten; vorgeschlagen sind 60. Das Alter reicht vom last_reported-Zeitstempel des Sensors bis zum physischen Ende des Energieintervalls. Eine Probe genau am Grenzwert wird akzeptiert.",
+          "pv_factor": "PV-Herstellungsemissionen pro erzeugter AC-kWh. Bei Speicherladung umfasst die PV-Belastung die modellierten Ladeverluste und wird bis zur anrechenbaren lokalen PV-Entladung aufbewahrt. Es gibt keinen Standardfaktor."
+        },
+        "description": "Wähle den Netz-CO₂-Sensor und gib deine Herstellungsfaktoren ausdrücklich als Dezimalzahl mit Punkt in g CO₂e/kWh an (0 bis 5000). Änderungen an diesen Einstellungen beginnen mit einem neuen Ausgangszählerstand; aufgelaufene Ergebnisse bleiben erhalten. Die Herkunft eines bereits vorhandenen Speicherinhalts gilt dann als unbekannt. Mit dem Abschluss werden alle Einstellungen gespeichert.",
         "title": "CO₂-Faktoren konfigurieren"
       },
       "reconfigure": {
@@ -165,7 +171,7 @@
         "data_description": {
           "topology": "Wähle, ob die PV-Erzeugung am Wechselrichter gemessen oder aus der vollständigen Smartmeter-Bilanz abgeleitet wird."
         },
-        "description": "Wähle die Topologie für den vorgeschlagenen Quellenwechsel. Die Auswahl bleibt ein Entwurf: Vorhandene Konfiguration, Store-Locator und historische Summen bleiben unverändert, bis der vollständige Rekonfigurations-Flow in seinem letzten Schritt bestätigt werden kann.",
+        "description": "Wähle, wie die PV-Erzeugung nach dem Quellenwechsel ermittelt wird. Bestehende Einstellungen und aufgelaufene Ergebnisse bleiben bis zum Speichern im letzten Schritt unverändert. Änderungen gelten für künftige Messungen.",
         "title": "Messtopologie ändern"
       },
       "separate_load": {
@@ -205,7 +211,7 @@
         "data_description": {
           "battery_present": "Wähle ausdrücklich aus, ob diese Anlage einen Stromspeicher besitzt. Bei einer neuen Einrichtung gibt es keine Vorauswahl; eine Rekonfiguration schlägt nur die bestehende Auswahl vor."
         },
-        "description": "Gib an, ob die Anlage einen Stromspeicher besitzt. Diese Auswahl erweitert nur den unverbindlichen Konfigurationsentwurf; sie erzeugt oder ändert keinen Config Entry, keinen Store, keinen Speicherherkunftsledger, keinen Listener, keinen Polling-Runner und kein Bilanzergebnis.",
+        "description": "Wähle, ob diese Anlage einen Stromspeicher besitzt. Beim Laden entsteht keine CO₂-Ersparnis. Nur nachweislich aus PV stammende Energie, die beim Entladen lokale Verbraucher erreicht, kann gutgeschrieben werden. Die Herkunft des anfänglichen Speicherinhalts ist unbekannt. Diese Auswahl wird mit der vollständigen Einrichtung gespeichert.",
         "title": "Stromspeicher auswählen"
       },
       "storage_sources": {
@@ -220,7 +226,7 @@
         "data_description": {
           "battery_charge": "Richtungsgetrennte kumulative Energie, die beim Laden am AC-Eingang des Speichers gemessen wird.",
           "battery_discharge": "Richtungsgetrennte kumulative Energie, die beim Entladen am AC-Ausgang des Speichers gemessen wird.",
-          "battery_identity": "Bei der Rekonfiguration eines vorhandenen Speichers erforderlich; keine Option ist vorausgewählt. Wähle einen Austausch auch dann aus, wenn die Zähler-Entities gleich geblieben sind, denn CO2 Saver kann einen physischen Austausch hinter unveränderten Zählern nicht erkennen. Derselbe Speicher behält seine interne Identität; die Auswahl Austausch erzeugt einmalig eine neue Entwurfsidentität. Die Auswahl wird nicht als dauerhaftes Merkmal gespeichert. Wenn der vollständige Flow eine wirksame Änderung übernimmt, startet er ein prospektives Segment, quarantänisiert den bisherigen Speicherbestand konservativ und berechnet historische Werte nie neu.",
+          "battery_identity": "Wähle, ob der physische Speicher unverändert ist oder ersetzt wurde. Wähle einen Austausch auch dann aus, wenn die Zähler-Entities gleich geblieben sind; ihre Namen beweisen keine physische Identität. Ein Speichertausch beginnt mit einem neuen Ausgangszählerstand und behandelt die Herkunft seines Inhalts als unbekannt. Bereits verbuchte Ergebnisse bleiben erhalten.",
           "battery_sources_confirmed": "Bestätige, dass Laden und Entladen die korrekten getrennten Richtungen verwenden und aus derselben atomaren physischen Erfassung wie alle ausgewählten PV- und Netzrollen stammen, mit exakt demselben co2saver_period_end.",
           "round_trip_efficiency_percent": "Gib eine einfache Dezimalzahl größer als 0 und höchstens 100 ein. Auch der vorgeschlagene Wert von 90 % muss sichtbar bestätigt werden.",
           "usable_capacity_kwh": "Gib die am AC-Ausgang des Speichers nutzbare Energie von 0.1 bis 1000 kWh ein. Es gibt keinen Standardwert."
@@ -235,7 +241,7 @@
         "data_description": {
           "topology": "Wähle, ob die PV-Erzeugung am Wechselrichter gemessen oder aus der vollständigen Smartmeter-Bilanz abgeleitet wird."
         },
-        "description": "Wähle, wie CO2 Saver die PV-Erzeugung ermittelt. Dies startet eine schrittweise Einrichtung; eine Anlage wird erst angelegt, wenn alle Konfigurationsschritte verfügbar und abgeschlossen sind.",
+        "description": "Wähle, wie CO2 Saver die PV-Erzeugung ermittelt. Die Einstellungen werden gespeichert, nachdem du alle Einrichtungsschritte abgeschlossen hast.",
         "title": "Messtopologie auswählen"
       }
     }
@@ -329,7 +335,7 @@
             "title": "Zurücksetzen der Bilanz bestätigen"
           },
           "init": {
-            "description": "CO2 Saver kann die gespeicherte Bilanz für {name} nicht sicher lesen oder verifizieren. Die Auswertung ist zum Schutz der vorhandenen Daten angehalten. Versuche zuerst, die bestehende Generation erneut zu laden. Ein Reset verlangt eine ausdrückliche Bestätigung nach Prüfung der Datenverlust- und Statistikfolgen.\n\nVersuche zunächst, die bestehende Bilanz ohne Reset erneut zu laden. Falls sie nicht wiederhergestellt werden kann, prüfe die getrennte Option zum Zurücksetzen.",
+            "description": "CO2 Saver kann die gespeicherte Bilanz für {name} nicht sicher lesen oder verifizieren. Die Auswertung ist zum Schutz der vorhandenen Daten angehalten. Versuche zuerst, die bestehende Bilanz ohne Reset erneut zu laden. Falls sie nicht wiederhergestellt werden kann, prüfe die getrennte Option zum Zurücksetzen und ihre Datenverlust- und Statistikfolgen, bevor du sie ausdrücklich bestätigst.",
             "menu_options": {
               "confirm": "Zurücksetzen der Bilanz prüfen",
               "retry": "Ohne Reset erneut laden"
@@ -497,7 +503,13 @@
           "grid_max_age_minutes": "Maximales Alter der Netz-CO₂-Probe (Minuten)",
           "pv_factor": "PV-Herstellungsfaktor (g CO₂e/kWh)"
         },
-        "description": "Wähle einen registrierten Netz-CO₂-Sensor mit eindeutiger CO₂e-Intensität. Gib die Herstellungsfaktoren ausdrücklich als Dezimaltext mit Punkt in g CO₂e/kWh an (0 bis 5000). Der PV-Faktor gilt pro erzeugter AC-kWh, der Speicherfaktor pro anrechenbar entladener AC-kWh. Änderungen beginnen ein neues zukünftiges Messsegment; historische Summen bleiben erhalten. Mit dem Abschluss wird die vollständige Konfiguration gespeichert.",
+        "data_description": {
+          "battery_factor": "Speicher-Herstellungsemissionen pro anrechenbarer AC-kWh aus PV, die zu lokalen Verbrauchern entladen wird. Beim Laden selbst entstehen weder Ersparnis noch eine Buchung des Speicher-Herstellungsanteils. Es gibt keinen Standardfaktor.",
+          "grid_intensity_source": "Der aktuelle Sensorwert wird einmal pro Minute gelesen. Sein Veröffentlichungszeitpunkt darf nicht nach dem physischen Ende des Energieintervalls liegen. Bei fehlenden, ungültigen, veralteten oder späteren Proben bleibt die Energie ohne CO₂-Bewertung; ältere Proben werden nicht ersatzweise verwendet und eine spätere Nachbewertung erfolgt nicht.",
+          "grid_max_age_minutes": "Wähle 1 bis 1440 ganze Minuten; vorgeschlagen sind 60. Das Alter reicht vom last_reported-Zeitstempel des Sensors bis zum physischen Ende des Energieintervalls. Eine Probe genau am Grenzwert wird akzeptiert.",
+          "pv_factor": "PV-Herstellungsemissionen pro erzeugter AC-kWh. Bei Speicherladung umfasst die PV-Belastung die modellierten Ladeverluste und wird bis zur anrechenbaren lokalen PV-Entladung aufbewahrt. Es gibt keinen Standardfaktor."
+        },
+        "description": "Wähle den Netz-CO₂-Sensor und gib deine Herstellungsfaktoren ausdrücklich als Dezimalzahl mit Punkt in g CO₂e/kWh an (0 bis 5000). Änderungen an diesen Einstellungen beginnen mit einem neuen Ausgangszählerstand; aufgelaufene Ergebnisse bleiben erhalten. Die Herkunft eines bereits vorhandenen Speicherinhalts gilt dann als unbekannt. Mit dem Abschluss werden alle Einstellungen gespeichert.",
         "title": "CO₂-Faktoren konfigurieren"
       },
       "separate_load": {
