@@ -5,13 +5,15 @@ Haushalt oder in konfigurierten zusätzlichen Verbrauchern genutzt wird. Die
 Custom Integration liest vorhandene Home-Assistant-Energiesensoren und zeigt
 Energie, Bruttovermeidung, Herstellungsbelastung und Nettoersparnis getrennt an.
 
-**Stand:** Der MVP ist implementiert; die erste Veröffentlichung wird vorbereitet.
+**Version 0.1.0:** Die erste MVP-Version. Die [Release Notes](docs/releases/0.1.0.md)
+beschreiben den geprüften Umfang und seine Messvoraussetzungen.
 Geprüft mit Home Assistant **2026.9.0** und Python **3.14.7**; die technische
 Mindestbasis ist Home Assistant 2026.9.0 mit Python 3.14.2.
 
 ## Installation und erster Start
 
-1. Den [Quellcode](https://github.com/dr-dimitri/co-saver) herunterladen und den
+1. `co2saver-0.1.0.zip` aus [Release v0.1.0](https://github.com/dr-dimitri/co-saver/releases/tag/v0.1.0)
+   herunterladen, entpacken und den
    vollständigen Ordner `custom_components/co2saver` in das Konfigurationsverzeichnis
    von Home Assistant kopieren. Bei Home Assistant OS lautet der Zielpfad
    `/config/custom_components/co2saver`. Dort muss `manifest.json` direkt liegen;
