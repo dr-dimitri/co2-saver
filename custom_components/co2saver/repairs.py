@@ -65,9 +65,13 @@ class StorageRepairFlow(RepairsFlow):
         """Offer a non-destructive retry before an optional confirmed new balance."""
         if self._entry_id is None:
             return self.async_abort(reason="unknown_issue")
-        if self._entry() is None:
+        if (entry := self._entry()) is None:
             return self.async_abort(reason="entry_missing")
-        return self.async_show_menu(step_id="init", menu_options=["retry", "confirm"])
+        return self.async_show_menu(
+            step_id="init",
+            menu_options=["retry", "confirm"],
+            description_placeholders={"name": entry.title},
+        )
 
     async def _reload(self, entry: ConfigEntry) -> bool:
         """Await public reload and its final loaded state before reporting success."""

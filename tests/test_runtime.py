@@ -121,6 +121,7 @@ def _plan(
     topology: str = "inverter",
     mode: str = "aggregate_shares",
     battery: bool = False,
+    additional: bool = True,
 ) -> tuple[dict[str, Any], dict[str, er.RegistryEntry]]:
     """Register a complete site with explicit aggregate or separate load semantics."""
     registry = er.async_get(hass)
@@ -174,7 +175,7 @@ def _plan(
             "mode": mode,
             "household_id": _HOUSE,
             "household_source": sources["load"].id,
-            "consumers": [consumer],
+            "consumers": [consumer] if additional else [],
         },
         "factors": factors,
     }
@@ -276,12 +277,18 @@ async def _baseline(
 
 
 @pytest.mark.parametrize("topology", ["inverter", "smart_meter"])
-@pytest.mark.parametrize("mode", ["aggregate_shares", "separate_meters"])
+@pytest.mark.parametrize("consumption", ["household", "shares", "separate"])
 async def test_full_runtime_matrix_books_exact_system_consumers_and_remainder(
-    hass: HomeAssistant, timers: list[_Timer], reads: _Reads, topology: str, mode: str
+    hass: HomeAssistant,
+    timers: list[_Timer],
+    reads: _Reads,
+    topology: str,
+    consumption: str,
 ) -> None:
     """Every accepted topology and allocation mode uses the existing domain model."""
-    plan, sources = _plan(hass, topology=topology, mode=mode)
+    mode = "separate_meters" if consumption == "separate" else "aggregate_shares"
+    additional = consumption != "household"
+    plan, sources = _plan(hass, topology=topology, mode=mode, additional=additional)
     entry = await _setup(hass, plan)
     assert len(timers) == 1
     assert reads.energy == reads.grid == 0
@@ -299,9 +306,16 @@ async def test_full_runtime_matrix_books_exact_system_consumers_and_remainder(
     assert state.totals.direct_net_g == 720
     assert state.totals.storage_pv_kwh == 0
     assert entry.runtime_data.available
-    household = Fraction(5, 4) if mode == "aggregate_shares" else Fraction(1)
+    household = {
+        "household": Fraction(2),
+        "shares": Fraction(5, 4),
+        "separate": Fraction(1),
+    }[consumption]
     assert dict(state.consumer_totals)[_HOUSE].direct_pv_kwh == household
-    assert dict(state.consumer_totals)[_WALLBOX].direct_pv_kwh == 0
+    if additional:
+        assert dict(state.consumer_totals)[_WALLBOX].direct_pv_kwh == 0
+    else:
+        assert set(dict(state.consumer_totals)) == {_HOUSE}
     assert state.unassigned_direct_kwh == 2 - household
     assert (
         sum(

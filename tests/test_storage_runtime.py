@@ -124,16 +124,19 @@ def _assert_conservation(state: GenerationState) -> None:
         )
 
 
-async def _site(
+async def _site(  # noqa: PLR0913 - independent supported site and baseline variants
     hass: HomeAssistant,
     clocks: list[_Timer],
     *,
     topology: str = "inverter",
     mode: str = "aggregate_shares",
     observe_empty: bool = True,
+    additional: bool = True,
 ) -> _StorageSite:
     """Create a quarantined battery, then prove emptiness by real measured discharge."""
-    plan, sources = _plan(hass, topology=topology, mode=mode, battery=True)
+    plan, sources = _plan(
+        hass, topology=topology, mode=mode, battery=True, additional=additional
+    )
     entry = await _setup(hass, plan)
     assert entry.runtime_data.runner is not None
     await _baseline(hass, sources, clocks, mode=mode)
@@ -175,12 +178,16 @@ async def _pv_charge(site: _StorageSite) -> GenerationState:
 
 
 @pytest.mark.parametrize("topology", ["inverter", "smart_meter"])
-@pytest.mark.parametrize("mode", ["aggregate_shares", "separate_meters"])
+@pytest.mark.parametrize("consumption", ["household", "shares", "separate"])
 async def test_reference_pv_cycle_books_only_delivered_energy_and_exact_burdens(
-    hass: HomeAssistant, timers: list[_Timer], topology: str, mode: str
+    hass: HomeAssistant, timers: list[_Timer], topology: str, consumption: str
 ) -> None:
     """ADR 9.3 matches hand calculation through every supported meter topology."""
-    site = await _site(hass, timers, topology=topology, mode=mode)
+    mode = "separate_meters" if consumption == "separate" else "aggregate_shares"
+    additional = consumption != "household"
+    site = await _site(
+        hass, timers, topology=topology, mode=mode, additional=additional
+    )
     charged = await _pv_charge(site)
     assert charged.ledger is not None
     assert (
@@ -194,16 +201,29 @@ async def test_reference_pv_cycle_books_only_delivered_energy_and_exact_burdens(
     assert charged.ledger.pv_density_upper.grams_per_kwh == Fraction(400, 9)
     assert charged.totals.direct_pv_kwh == 2
     assert charged.totals.storage_pv_kwh == charged.totals.storage_net_g == 0
-    discharged = await site.step({"discharge": 2, "load": 2}, grid="500")
+    discharged = await site.step(
+        {"discharge": 2, "load": 2, "wallbox": 1 if consumption == "separate" else 0},
+        grid="500",
+    )
     assert discharged.totals.storage_pv_kwh == 2
     assert discharged.totals.storage_gross_g == 1000
     assert discharged.totals.storage_pv_burden_g == Fraction(800, 9)
     assert discharged.totals.storage_burden_g == 40
     assert discharged.totals.storage_net_g == Fraction(7840, 9)
     assert discharged.totals.direct_pv_kwh == 2
-    house_energy = Fraction(3, 2) if mode == "aggregate_shares" else Fraction(2)
+    house_energy = {
+        "household": Fraction(2),
+        "shares": Fraction(3, 2),
+        "separate": Fraction(1),
+    }[consumption]
     assert dict(discharged.consumer_totals)[_HOUSE].storage_pv_kwh == house_energy
-    assert dict(discharged.consumer_totals)[_WALLBOX].storage_pv_kwh == 2 - house_energy
+    if additional:
+        assert (
+            dict(discharged.consumer_totals)[_WALLBOX].storage_pv_kwh
+            == 2 - house_energy
+        )
+    else:
+        assert set(dict(discharged.consumer_totals)) == {_HOUSE}
     assert discharged.ledger is not None
     assert discharged.ledger.pv_lower.kwh == Fraction(7, 10)
     assert discharged.ledger.pv_burden.grams == Fraction(280, 9)
@@ -218,6 +238,7 @@ async def test_reference_pv_cycle_books_only_delivered_energy_and_exact_burdens(
 
 
 @pytest.mark.parametrize("topology", ["inverter", "smart_meter"])
+@pytest.mark.parametrize("consumption", ["household", "shares", "separate"])
 @pytest.mark.parametrize(
     ("local", "export", "eligible"),
     [("2", "0", Fraction(11, 10)), ("1", "1", Fraction(1, 10)), ("0", "2", Fraction())],
@@ -227,12 +248,17 @@ async def test_mixed_charge_uses_guaranteed_origin_and_local_intersection(  # no
     timers: list[_Timer],
     *,
     topology: str,
+    consumption: str,
     local: str,
     export: str,
     eligible: Fraction,
 ) -> None:
     """ADR 9.4 excludes grid origin and export without proportional attribution."""
-    site = await _site(hass, timers, topology=topology)
+    mode = "separate_meters" if consumption == "separate" else "aggregate_shares"
+    additional = consumption != "household"
+    site = await _site(
+        hass, timers, topology=topology, mode=mode, additional=additional
+    )
     charged = await site.step({"pv_generation": 3, "grid_import": 1, "charge": 4})
     assert charged.ledger is not None
     assert (
@@ -244,7 +270,13 @@ async def test_mixed_charge_uses_guaranteed_origin_and_local_intersection(  # no
     assert charged.ledger.non_pv_upper.kwh == Fraction(9, 10)
     assert charged.totals.direct_pv_kwh == charged.totals.storage_pv_kwh == 0
     discharged = await site.step(
-        {"discharge": 2, "load": local, "grid_export": export}, grid="500"
+        {
+            "discharge": 2,
+            "load": local,
+            "wallbox": str(Decimal(local) / 2) if consumption == "separate" else "0",
+            "grid_export": export,
+        },
+        grid="500",
     )
     assert discharged.totals.storage_pv_kwh == eligible
     assert discharged.totals.storage_gross_g == eligible * 500
@@ -253,6 +285,31 @@ async def test_mixed_charge_uses_guaranteed_origin_and_local_intersection(  # no
     assert discharged.ledger is not None
     assert discharged.ledger.pv_lower.kwh == Fraction(7, 10)
     assert discharged.ledger.pv_burden.grams == Fraction(280, 9)
+    # Independent guarantees leave a remainder; they are not proportional
+    # allocations of the system's eligible PV discharge.
+    consumer_energy = {
+        "household": {
+            "2": (Fraction(11, 10),),
+            "1": (Fraction(1, 10),),
+            "0": (Fraction(),),
+        },
+        "shares": {
+            "2": (Fraction(3, 5), Fraction()),
+            "1": (Fraction(), Fraction()),
+            "0": (Fraction(), Fraction()),
+        },
+        "separate": {
+            "2": (Fraction(1, 10), Fraction(1, 10)),
+            "1": (Fraction(), Fraction()),
+            "0": (Fraction(), Fraction()),
+        },
+    }[consumption][local]
+    totals = dict(discharged.consumer_totals)
+    assert tuple(value.storage_pv_kwh for value in totals.values()) == consumer_energy
+    assert discharged.unassigned_storage_kwh == eligible - sum(consumer_energy)
+    for consumer_total in totals.values():
+        assert consumer_total.storage_gross_g == consumer_total.storage_pv_kwh * 500
+        assert consumer_total.storage_burden_g == consumer_total.storage_pv_kwh * 20
 
 
 async def test_pure_grid_charge_never_receives_pv_credit(
