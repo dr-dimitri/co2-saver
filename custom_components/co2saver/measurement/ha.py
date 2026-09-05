@@ -140,6 +140,7 @@ class HomeAssistantEnergyReader:
             registry_entry is None
             or registry_entry.id != source.registry_id
             or registry_entry.domain != SENSOR_DOMAIN
+            or registry_entry.disabled
         ):
             return _invalid(
                 source,

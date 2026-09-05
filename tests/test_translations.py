@@ -224,3 +224,35 @@ async def test_sensor_translations(
         assert "{consumer_name}" in template
         assert "Wallbox" in template.format(consumer_name="Wallbox")
     assert not any("[%key:" in value for value in translated.values())
+
+
+@pytest.mark.parametrize("language", ["en", "de"])
+async def test_repairs_translations(
+    hass: HomeAssistant, enable_custom_integrations: None, language: str
+) -> None:
+    """Expose repair consequences, explicit confirmation, retry and failure messages."""
+    _ = enable_custom_integrations
+    translated = await async_get_translations(hass, language, "issues", {DOMAIN})
+    prefix = f"component.{DOMAIN}.issues"
+    for issue in ("storage_integrity", "sources_changed", "configuration_invalid"):
+        assert translated[f"{prefix}.{issue}.title"]
+        description = translated[f"{prefix}.{issue}.description"]
+        assert "{name}" in description
+        assert "Solar" in description.format(name="Solar")
+    flow = f"{prefix}.storage_integrity.fix_flow"
+    for step in ("init", "confirm"):
+        assert translated[f"{flow}.step.{step}.title"]
+        assert translated[f"{flow}.step.{step}.description"]
+    for option in ("retry", "confirm"):
+        assert translated[f"{flow}.step.init.menu_options.{option}"]
+    assert translated[f"{flow}.step.confirm.data.confirm_reset"]
+    for error in (
+        "confirmation_required",
+        "reload_failed",
+        "unload_failed",
+        "repair_failed",
+    ):
+        assert translated[f"{flow}.error.{error}"]
+    for reason in ("unknown_issue", "entry_missing", "already_repaired"):
+        assert translated[f"{flow}.abort.{reason}"]
+    assert not any("[%key:" in value for value in translated.values())

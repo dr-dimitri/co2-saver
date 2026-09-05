@@ -36,6 +36,7 @@ from .config_sources import (
 from .config_storage import validate_storage_selection
 from .const import DOMAIN
 from .consumer_flow import ConsumerFlowSteps
+from .migration import CONFIG_MINOR_VERSION, CONFIG_VERSION
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -51,7 +52,8 @@ _BATTERY_CHOICES = ("without_battery", "with_battery")
 class Co2SaverConfigFlow(ConsumerFlowSteps, ConfigFlow, domain=DOMAIN):
     """Collect an isolated draft without committing intermediate configuration."""
 
-    VERSION = 1
+    VERSION = CONFIG_VERSION
+    MINOR_VERSION = CONFIG_MINOR_VERSION
 
     def __init__(self) -> None:
         """Keep all incomplete configuration private to this flow."""

@@ -298,6 +298,50 @@
       }
     }
   },
+  "issues": {
+    "configuration_invalid": {
+      "description": "The configuration for {name} is incomplete, invalid, or uses an unsupported version. Review the integration settings and installed version. Accounting remains stopped; stored results are not replaced with zero.",
+      "title": "CO2 Saver configuration needs attention"
+    },
+    "sources_changed": {
+      "description": "A source required by {name} was removed or disabled. Open the integration settings and reconfigure the source. Accounting is stopped; existing totals are preserved. Source names or entity IDs cannot prove that a replacement measures the same physical flow.",
+      "title": "Configured energy or CO₂ source changed"
+    },
+    "storage_integrity": {
+      "description": "CO2 Saver cannot safely read or verify the stored accounting for {name}. Processing is stopped to preserve the existing data. Retry loading the existing generation first. A reset is available only with explicit confirmation after reviewing the data-loss and statistics consequences.",
+      "fix_flow": {
+        "abort": {
+          "already_repaired": "The stored accounting is already available again.",
+          "entry_missing": "The affected CO2 Saver configuration no longer exists.",
+          "unknown_issue": "This repair is not supported."
+        },
+        "error": {
+          "confirmation_required": "Explicitly confirm the accounting reset before continuing.",
+          "reload_failed": "The integration did not finish loading successfully. Resolve the reported problem and retry loading.",
+          "repair_failed": "The repair could not be completed and verified. The issue remains open; check local storage and retry loading before attempting another reset.",
+          "unload_failed": "The integration could not be stopped safely. No reset was started. Retry after resolving the unload problem."
+        },
+        "step": {
+          "confirm": {
+            "data": {
+              "confirm_reset": "I have reviewed the backup, data-loss, and statistics consequences and confirm the reset"
+            },
+            "description": "Back up Home Assistant before continuing. Resetting starts a new accounting generation with all CO2 Saver result totals at zero. Battery contents become unknown and receive no PV credit until measurements prove their origin again. The first valid measurement becomes a new baseline; gaps are never estimated.\n\nExisting generation files are retained for manual recovery. An existing unreadable manifest is backed up and verified; old generations are never guessed or automatically reassigned. Sensor identities remain unchanged. Recorder keeps earlier history and continues its statistics in a new counter cycle; net sensors publish a new last_reset time so the reset is not counted as negative savings.\n\nConfirm only if you accept these consequences. Canceling this step does not reset the accounting.\n\nAn already started, incomplete repair is recorded persistently and resumes the same generation after a restart or in a new dialog. A failed loading attempt does not trigger another reset.",
+            "title": "Confirm accounting reset"
+          },
+          "init": {
+            "description": "Try loading the existing accounting again without resetting it. If the stored data cannot be recovered, review the separate reset option.",
+            "menu_options": {
+              "confirm": "Review accounting reset",
+              "retry": "Retry loading without a reset"
+            },
+            "title": "Repair stored CO₂ accounting"
+          }
+        }
+      },
+      "title": "Stored CO₂ accounting needs attention"
+    }
+  },
   "options": {
     "abort": {
       "already_configured": "This grid boundary already belongs to a CO2 Saver plant.",

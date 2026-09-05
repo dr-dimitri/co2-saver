@@ -31,7 +31,18 @@ if TYPE_CHECKING:
 
 _UUID = re.compile(r"[0-9a-f]{32}\Z")
 _FINGERPRINT = re.compile(r"[0-9a-f]{64}\Z")
-_SCHEMA = {"schema_version": 1, "minor_version": 1}
+MANIFEST_SCHEMA_VERSION = 1
+MANIFEST_MINOR_VERSION = 2
+GENERATION_SCHEMA_VERSION = 1
+GENERATION_MINOR_VERSION = 1
+_MANIFEST_SCHEMA = {
+    "schema_version": MANIFEST_SCHEMA_VERSION,
+    "minor_version": MANIFEST_MINOR_VERSION,
+}
+_GENERATION_SCHEMA = {
+    "schema_version": GENERATION_SCHEMA_VERSION,
+    "minor_version": GENERATION_MINOR_VERSION,
+}
 
 
 def _invalid(message: str) -> None:
@@ -54,9 +65,9 @@ def _revision(value: object) -> int:
     return revision
 
 
-def _schema(payload: dict[str, object]) -> None:
+def _schema(payload: dict[str, object], expected: dict[str, int]) -> None:
     """Reject all unknown major and minor payload versions explicitly."""
-    for key, value in _SCHEMA.items():
+    for key, value in expected.items():
         if type(payload[key]) is not int or payload[key] != value:
             _invalid("unsupported persisted schema version")
 
@@ -72,6 +83,10 @@ class Manifest:
     previous_generations: tuple[str, ...] = ()
     initialized: bool = False
     commit_revision: int = 1
+    repair_reset_at: datetime | None = None
+    manifest_lost: bool = False
+    repair_pending: bool = False
+    repair_issue_token: str | None = None
 
 
 class ManifestCodec:
@@ -85,7 +100,7 @@ class ManifestCodec:
     def encode(state: Manifest) -> dict[str, object]:
         """Serialize the complete authoritative pointer."""
         return {
-            **_SCHEMA,
+            **_MANIFEST_SCHEMA,
             "storage_id": state.storage_id,
             "manifest_epoch": state.manifest_epoch,
             "owner_entry_id": state.owner_entry_id,
@@ -93,6 +108,12 @@ class ManifestCodec:
             "previous_generations": list(state.previous_generations),
             "initialized": state.initialized,
             "commit_revision": state.commit_revision,
+            "repair_reset_at": None
+            if state.repair_reset_at is None
+            else _encode_utc(state.repair_reset_at),
+            "manifest_lost": state.manifest_lost,
+            "repair_pending": state.repair_pending,
+            "repair_issue_token": state.repair_issue_token,
         }
 
     def decode(self, value: object) -> Manifest:
@@ -100,9 +121,11 @@ class ManifestCodec:
         payload = _as_object(
             value,
             path="manifest",
-            keys=frozenset({*_SCHEMA, *(field.name for field in fields(Manifest))}),
+            keys=frozenset(
+                {*_MANIFEST_SCHEMA, *(field.name for field in fields(Manifest))}
+            ),
         )
-        _schema(payload)
+        _schema(payload, _MANIFEST_SCHEMA)
         storage_id = storage_identifier(payload["storage_id"])
         if storage_id != self.storage_id:
             _invalid("foreign manifest storage_id")
@@ -124,6 +147,28 @@ class ManifestCodec:
         initialized = payload["initialized"]
         if type(initialized) is not bool or (initialized and owner is None):
             _invalid("initialized manifest requires an owner and boolean marker")
+        reset_value = payload["repair_reset_at"]
+        reset = (
+            None
+            if reset_value is None
+            else _decode_utc(reset_value, path="repair_reset_at")
+        )
+        lost = payload["manifest_lost"]
+        if type(lost) is not bool:
+            _invalid("manifest_lost must be boolean")
+        if (reset is not None and owner is None) or (lost and reset is None):
+            _invalid("manifest repair requires an owner and reset timestamp")
+        pending = payload["repair_pending"]
+        if type(pending) is not bool:
+            _invalid("repair_pending must be boolean")
+        if pending and reset is None:
+            _invalid("pending repair requires a reset timestamp")
+        token_value = payload["repair_issue_token"]
+        token = None if token_value is None else storage_identifier(token_value)
+        if (pending and token is None) or (token is not None and reset is None):
+            _invalid(
+                "repair issue token requires a reset and identifies pending repair"
+            )
         return Manifest(
             storage_id=storage_id,
             manifest_epoch=storage_identifier(payload["manifest_epoch"]),
@@ -132,6 +177,10 @@ class ManifestCodec:
             previous_generations=previous,
             initialized=cast("bool", initialized),
             commit_revision=_revision(payload["commit_revision"]),
+            repair_reset_at=reset,
+            manifest_lost=cast("bool", lost),
+            repair_pending=cast("bool", pending),
+            repair_issue_token=token,
         )
 
 
@@ -151,6 +200,10 @@ class ManifestRevisionPolicy:
             or state.owner_entry_id is not None
             or state.initialized
             or state.previous_generations
+            or state.repair_reset_at is not None
+            or state.manifest_lost
+            or state.repair_pending
+            or state.repair_issue_token is not None
         ):
             _invalid("initial manifest must be an unbound bootstrap")
 
@@ -162,6 +215,10 @@ class ManifestRevisionPolicy:
             or before.manifest_epoch != after.manifest_epoch
             or before.active_generation != after.active_generation
             or before.previous_generations != after.previous_generations
+            or before.repair_reset_at != after.repair_reset_at
+            or before.manifest_lost != after.manifest_lost
+            or before.repair_pending != after.repair_pending
+            or before.repair_issue_token != after.repair_issue_token
             or (before.initialized and not after.initialized)
             or after.owner_entry_id is None
             or (
@@ -350,7 +407,7 @@ class GenerationCodec:
     def encode(state: GenerationState) -> dict[str, object]:
         """Serialize every restart-critical part in one complete payload."""
         return {
-            **_SCHEMA,
+            **_GENERATION_SCHEMA,
             "storage_id": state.storage_id,
             "owner_entry_id": state.owner_entry_id,
             "generation": state.generation,
@@ -377,10 +434,13 @@ class GenerationCodec:
             value,
             path="generation",
             keys=frozenset(
-                {*_SCHEMA, *(field.name for field in fields(GenerationState))}
+                {
+                    *_GENERATION_SCHEMA,
+                    *(field.name for field in fields(GenerationState)),
+                }
             ),
         )
-        _schema(payload)
+        _schema(payload, _GENERATION_SCHEMA)
         identity = (
             storage_identifier(payload["storage_id"]),
             _as_nonempty_string(payload["owner_entry_id"], path="owner_entry_id"),
@@ -450,7 +510,15 @@ class GenerationRevisionPolicy:
             )
             or state.totals != CumulativeTotals()
             or any(total != CumulativeTotals() for _, total in state.consumer_totals)
-            or any(count for _, count in state.diagnostics)
+            or any(
+                count
+                and not (
+                    name == "manifest_losses"
+                    and count == 1
+                    and state.repair_reset_at is not None
+                )
+                for name, count in state.diagnostics
+            )
             or state.unassigned_direct_kwh
             or state.unassigned_storage_kwh
             or (
