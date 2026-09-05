@@ -220,13 +220,17 @@ class UtcMinuteRunner:
             second=0,
         )
 
-    async def async_stop(self) -> None:
-        """Remove the timer first, then await any in-flight atomic commit."""
+    def request_stop(self) -> None:
+        """Prevent further reads immediately, including from inside a consumer."""
         cancel_timer = self._cancel_timer
         if cancel_timer is not None:
             cancel_timer()
             self._cancel_timer = None
         self._stopped = True
+
+    async def async_stop(self) -> None:
+        """Remove the timer first, then await any in-flight atomic commit."""
+        self.request_stop()
         async with self._lock:
             return
 

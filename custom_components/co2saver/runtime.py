@@ -5,6 +5,8 @@
 
 from __future__ import annotations
 
+import logging
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from homeassistant.core import callback
@@ -13,15 +15,99 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.helper_integration import async_handle_source_entity_changes
 
 from .bootstrap import PersistedRuntime, async_setup_storage
+from .config_factors import HomeAssistantGridIntensityReader
 from .config_plan import all_source_registry_ids, canonical_plan
+from .evaluation import DirectEvaluationPlan, EvaluationOutcome, evaluate_observations
 from .flow_commit import async_release_visible_create
+from .measurement.ha import HomeAssistantEnergyReader, UtcMinuteRunner
+from .measurement.models import MeasurementPhase
 from .measurement.storage import VerifiedAtomicStoreError
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+    from datetime import datetime
+
     from homeassistant.config_entries import ConfigEntry
     from homeassistant.core import HomeAssistant
 
-    type Co2SaverConfigEntry = ConfigEntry[PersistedRuntime]
+    from .measurement.models import EnergyObservation
+    from .persistence import GenerationState
+
+    type Co2SaverConfigEntry = ConfigEntry[EntryRuntime]
+
+_LOGGER = logging.getLogger(__name__)
+
+
+@dataclass(slots=True)
+class EntryRuntime(PersistedRuntime):
+    """One verified generation and its live observation status."""
+
+    runner: UtcMinuteRunner | None = None
+    available: bool = False
+    status: str = "awaiting_observation"
+    failed: bool = False
+
+
+def _start_direct_runner(
+    hass: HomeAssistant, runtime: EntryRuntime, data: Mapping[str, object]
+) -> None:
+    """Bind immutable configuration and one synchronous CO₂ read to each tick."""
+    plan = DirectEvaluationPlan.from_config(data)
+    energy_reader = HomeAssistantEnergyReader(hass, runtime.state.measurement.sources)
+    grid_reader = HomeAssistantGridIntensityReader(hass, plan.grid_source_registry_id)
+
+    async def consume(
+        observations: tuple[EnergyObservation, ...], observed_at: datetime
+    ) -> None:
+        """Publish only the fully verified result of the captured physical poll."""
+        if runtime.failed:
+            return
+        sample, sample_error = grid_reader.read()
+        outcome: EvaluationOutcome | None = None
+
+        def transform(state: GenerationState) -> GenerationState:
+            """Evaluate against durable state, never an unverified runtime cache."""
+            nonlocal outcome
+            outcome = evaluate_observations(
+                state,
+                observations,
+                observed_at,
+                plan=plan,
+                current_grid_sample=sample,
+            )
+            return outcome.state
+
+        try:
+            committed = await runtime.store.async_transact(transform)
+        except (OSError, ValueError, VerifiedAtomicStoreError) as err:
+            runtime.failed = True
+            runtime.available = False
+            runtime.status = "storage_error"
+            runner.request_stop()
+            _LOGGER.exception(
+                "CO2 Saver stopped after an unverifiable state commit (%s)",
+                type(err).__name__,
+            )
+            return
+        if outcome is None:  # pragma: no cover - synchronous Store contract
+            raise RuntimeError
+        runtime.state = committed
+        grid_error = sample_error or outcome.grid_error
+        if outcome.measurement_fault is not None:
+            runtime.status = outcome.measurement_fault.reason.value
+        elif grid_error is not None:
+            runtime.status = grid_error
+        else:
+            runtime.status = (
+                "ok"
+                if committed.measurement.phase is MeasurementPhase.ACTIVE
+                else committed.measurement.phase.value
+            )
+        runtime.available = runtime.status == "ok"
+
+    runner = UtcMinuteRunner(hass, energy_reader, consume)
+    runtime.runner = runner
+    runner.start()
 
 
 def _validated_sources(
@@ -54,11 +140,12 @@ async def async_setup_entry(
     await async_release_visible_create(hass, entry)
     try:
         _validated_sources(hass, entry)
-        runtime = await async_setup_storage(hass, entry)
+        persisted = await async_setup_storage(hass, entry)
         sources = _validated_sources(hass, entry)
     except (KeyError, OSError, ValueError, VerifiedAtomicStoreError) as err:
         message = "CO2 Saver configuration or stored state is invalid"
         raise ConfigEntryError(message) from err
+    runtime = EntryRuntime(store=persisted.store, state=persisted.state)
     entry.runtime_data = runtime
 
     async def source_removed() -> None:
@@ -76,12 +163,19 @@ async def async_setup_entry(
                 source_entity_removed=source_removed,
             )
         )
+    if entry.data["battery"] is None:
+        _start_direct_runner(hass, runtime, entry.data)
+    else:
+        runtime.status = "storage_evaluation_pending"
     return True
 
 
 async def async_unload_entry(
     hass: HomeAssistant,  # noqa: ARG001
-    entry: Co2SaverConfigEntry,  # noqa: ARG001
+    entry: Co2SaverConfigEntry,
 ) -> bool:
     """Unload a CO2 Saver config entry."""
+    if entry.runtime_data.runner is not None:
+        await entry.runtime_data.runner.async_stop()
+    entry.runtime_data.available = False
     return True

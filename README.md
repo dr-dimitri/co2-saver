@@ -4,8 +4,9 @@ CO2 Saver wird eine Home-Assistant-Custom-Integration, die nachvollziehbar berec
 
 > **Status:** Frühe Entwicklungsphase. Der vollständige Config Flow kann eine
 > Anlage mit Messtopologie, optionalem Speicher, Verbrauchern und CO₂-Faktoren
-> einrichten. Setup prüft und bindet einen atomar gespeicherten Zustand; es läuft
-> noch keine Messauswertung oder CO₂-Buchung. Diese folgen in Issues #9 und #10.
+> einrichten. Anlagen ohne Speicher werten ihre Energiezähler aus und speichern
+> direkte PV-Nutzung sowie CO₂-Bilanzen atomar. Einträge mit Speicher bleiben
+> bis Issue #10 ohne Messauswertung. Ergebnis-Entities folgen in Issue #11.
 
 ## Zielbild
 
@@ -21,6 +22,15 @@ Die Integration soll Energieflüsse aus vorhandenen Home-Assistant-Entitäten au
 ## Zentrale Bilanzierungsregel
 
 Direkt genutzter PV-Strom kann beim Verbrauch bilanziert werden. In einen Speicher geladener PV-Strom erzeugt zu diesem Zeitpunkt noch keine Einsparung: Die zugehörige Vermeidung wird erst anerkannt, wenn nachweislich PV-stämmige Energie aus dem Speicher an einen erfassten Verbraucher abgegeben wird. Direkte Nutzung und spätere Speicherentladung dürfen niemals doppelt gezählt werden.
+
+Bei Anlagen ohne Speicher berechnet die laufende Auswertung ausschließlich die
+mathematisch garantierte direkte PV-Nutzung. Deren Energie multipliziert mit der
+gültigen Netz-CO₂-Intensität ergibt die Bruttovermeidung; der PV-Herstellungsfaktor
+wird auf dieselbe Energie genau einmal angewendet. Die Differenz ist die
+Netto-Ersparnis und darf negativ sein. Exportierte Energie erhält keine Gutschrift.
+Für Haushalt und zusätzliche Verbraucher gelten jeweils eigene garantierte
+Flussuntergrenzen. Ihre Energiewerte und der ausdrücklich nicht zuordenbare Rest
+ergeben zusammen exakt die systemweite direkte PV-Energie.
 
 ## Aktueller Konfigurationsstand
 
@@ -96,8 +106,8 @@ aktuelle Sensorqualität werden vor dem Speichern geprüft. Ein `ppm`-Sensor ist
 keine Netz-CO₂-Quelle. Die Netzprobe muss endlich, nicht negativ, verfügbar und
 über `last_reported` zeitlich gültig sein; eine Device Class wird nicht verlangt.
 
-Für die folgende Messauswertung ist festgelegt: Jeder reguläre UTC-Minutenpoll
-liest genau einmal die aktuelle Netz-CO₂-Probe. Sie darf nicht nach dem
+Bei der laufenden Messauswertung liest jeder reguläre UTC-Minutenpoll
+genau einmal die aktuelle Netz-CO₂-Probe. Sie darf nicht nach dem
 physischen Ende des dann vollständig verarbeiteten Energieintervalls liegen
 und dessen konfiguriertes Höchstalter nicht überschreiten; beide Grenzen gelten
 einschließlich Gleichheit. Ältere Proben werden nicht zwischengespeichert oder
@@ -107,15 +117,19 @@ vervollständigten Energiekandidaten. Ohne zulässige aktuelle Probe bleibt die
 gutschriftfähige Energie dauerhaft unbewertet, ohne Emissionsbuchung oder spätere
 Nachbewertung. Die Entscheidung ist in
 [ADR-0001 Version 2.2](docs/decisions/0001-accounting-and-input-contract.md#43-zeitliche-zuordnung)
-festgehalten; die Runner-Aktivierung folgt weiterhin in #9 und #10.
+festgehalten. Die Auswertung ist derzeit ausschließlich für Anlagen ohne
+Speicher aktiv.
 
 Zwischenschritte bleiben unverbindliche Entwürfe. Erst der vollständig geprüfte
 Abschluss reserviert unter einem gemeinsamen Lock die Anlagenkennung und ein
 neues Manifest. Nach überprüftem Zurücklesen wird der Config Entry erzeugt. Setup
 bindet das Manifest an diesen Entry und initialisiert oder übernimmt genau die
 dort bezeichnete Generation. Sie enthält die Messphase, den vollständigen
-Segmentfingerabdruck, Speicherherkunft, Summen und Diagnosen. Es läuft in diesem
-Entwicklungsstand noch kein Messtimer.
+Segmentfingerabdruck, Speicherherkunft, Summen und Diagnosen. Anschließend startet
+für eine Anlage ohne Speicher genau ein Messtimer am UTC-Minutenraster. Bei
+einem konfigurierten Speicher bleiben sowohl direkte als auch gespeicherte
+PV-Energie bis zur vollständigen Speicherbilanz aus #10 ohne Auswertung; die
+Konfiguration und der konservative Speicherzustand bleiben erhalten.
 
 Über **Konfigurieren** können Verbraucher und Faktoren bearbeitet werden;
 **Neu konfigurieren** führt zusätzlich durch Topologie und Speicher. Abbrechen
@@ -176,6 +190,13 @@ Wechselt ein Zähler zwischen den unterstützten Einheiten `Wh`, `kWh` und `MWh`
 wird er konservativ ohne Delta neu gebaselined, damit kein unbewiesener
 Maßstabssprung als Energie erscheint.
 
+Fehlende oder ungültige Energiequellen, Zählerresets und Datenlücken erzeugen
+keine geschätzte Ersparnis. Nach einer Unterbrechung dient der erste neue gültige
+Gesamtvektor ausschließlich als Recovery-Baseline; erst das folgende vollständige
+Intervall kann wieder gebucht werden. Neustart und Reload stellen Messzustand
+und bisherige Summen gemeinsam wieder her. Unload entfernt zuerst den Timer und
+wartet einen bereits laufenden Commit ab. Verpasste Takte werden nicht nachgeholt.
+
 Die Festlegungen zu Messwerttypen, Emissionsfaktoren, Speicherherkunft, Verlusten und Zeitbezug stehen im angenommenen [Mess- und CO₂-Bilanzierungsvertrag](docs/decisions/0001-accounting-and-input-contract.md). Abhängige Implementierung muss diesen Vertrag einhalten.
 
 ## Fachlicher Kern
@@ -191,13 +212,16 @@ Das Modul `custom_components/co2saver/measurement` liest injizierte kumulative
 Energiequellen am UTC-Minutenraster, bildet daraus restartfest und fail-closed
 exakte Intervalle und stellt einen versionierten Home-Assistant-Store-Adapter
 bereit. Der Store erhält den Codec für den vollständigen Zustand und speichert
-Messbaseline und spätere Bilanzwerte gemeinsam in einer verifizierten
-Transaktion. Er initialisiert einen fehlenden Zustand nur nach ausdrücklich
+Messbaseline, Kandidaten, Diagnosen und kumulative Bilanzwerte gemeinsam in einer
+verifizierten Transaktion. Er initialisiert einen fehlenden Zustand nur nach ausdrücklich
 bestätigter physischer Abwesenheit; ein leeres Ladeergebnis genügt dafür nicht.
 Der vollständige UI-Flow nutzt diesen Vertrag zur aktuellen Validierung.
 Manifest, Eigentümerbindung und Generation werden atomar gespeichert und jeweils
-frisch zurückgelesen. Der Runner wird ohne Speicher in #9 und mit Speicher in #10
-aktiviert. Ergebnis-Entities folgen in #11.
+frisch zurückgelesen. Erst nach bestätigtem Zurücklesen übernimmt die Laufzeit
+die neuen Summen. Ein fehlgeschlagener Commit oder abweichendes Read-back stoppt
+weitere Reads und Buchungen. Die Auswertung ohne Speicher verwendet diesen
+gemeinsamen Transaktionspfad bereits; die Speicherbilanz folgt in #10 und die
+Ergebnis-Entities folgen in #11.
 
 ## Entwicklung
 
