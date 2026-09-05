@@ -240,6 +240,64 @@
       }
     }
   },
+  "entity": {
+    "sensor": {
+      "battery_lifecycle": {
+        "name": "Battery lifecycle emissions"
+      },
+      "consumer_direct_pv_energy": {
+        "name": "{consumer_name} direct PV energy"
+      },
+      "consumer_net_savings": {
+        "name": "{consumer_name} net CO₂ savings"
+      },
+      "consumer_storage_pv_energy": {
+        "name": "{consumer_name} local PV battery energy"
+      },
+      "direct_net_savings": {
+        "name": "Direct PV net CO₂ savings"
+      },
+      "direct_pv_energy": {
+        "name": "Direct PV energy"
+      },
+      "gross_avoided": {
+        "name": "Gross avoided CO₂ emissions"
+      },
+      "household_direct_pv_energy": {
+        "name": "Household direct PV energy"
+      },
+      "household_net_savings": {
+        "name": "Household net CO₂ savings"
+      },
+      "household_storage_pv_energy": {
+        "name": "Household local PV battery energy"
+      },
+      "net_savings": {
+        "name": "Net CO₂ savings"
+      },
+      "pv_lifecycle": {
+        "name": "PV lifecycle emissions"
+      },
+      "storage_net_savings": {
+        "name": "Battery net CO₂ savings"
+      },
+      "storage_pv_energy": {
+        "name": "Local PV battery energy"
+      },
+      "unassigned_direct_energy": {
+        "name": "Unassigned direct PV energy"
+      },
+      "unassigned_storage_energy": {
+        "name": "Unassigned local PV battery energy"
+      },
+      "unvalued_direct_energy": {
+        "name": "Unvalued direct PV energy"
+      },
+      "unvalued_storage_energy": {
+        "name": "Unvalued local PV battery energy"
+      }
+    }
+  },
   "options": {
     "abort": {
       "already_configured": "This grid boundary already belongs to a CO2 Saver plant.",

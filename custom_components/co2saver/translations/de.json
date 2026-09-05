@@ -240,6 +240,64 @@
       }
     }
   },
+  "entity": {
+    "sensor": {
+      "battery_lifecycle": {
+        "name": "Speicher-Herstellungsbelastung"
+      },
+      "consumer_direct_pv_energy": {
+        "name": "{consumer_name} direkt genutzte PV-Energie"
+      },
+      "consumer_net_savings": {
+        "name": "{consumer_name} Netto-CO₂-Ersparnis"
+      },
+      "consumer_storage_pv_energy": {
+        "name": "{consumer_name} lokal genutzte PV-Speicherenergie"
+      },
+      "direct_net_savings": {
+        "name": "Netto-CO₂-Ersparnis direkte PV"
+      },
+      "direct_pv_energy": {
+        "name": "Direkt genutzte PV-Energie"
+      },
+      "gross_avoided": {
+        "name": "Brutto vermiedene CO₂-Emissionen"
+      },
+      "household_direct_pv_energy": {
+        "name": "Haushalt direkt genutzte PV-Energie"
+      },
+      "household_net_savings": {
+        "name": "Haushalt Netto-CO₂-Ersparnis"
+      },
+      "household_storage_pv_energy": {
+        "name": "Haushalt lokal genutzte PV-Speicherenergie"
+      },
+      "net_savings": {
+        "name": "Netto-CO₂-Ersparnis"
+      },
+      "pv_lifecycle": {
+        "name": "PV-Herstellungsbelastung"
+      },
+      "storage_net_savings": {
+        "name": "Netto-CO₂-Ersparnis Speicher"
+      },
+      "storage_pv_energy": {
+        "name": "Lokal genutzte PV-Speicherenergie"
+      },
+      "unassigned_direct_energy": {
+        "name": "Nicht zuordenbare direkte PV-Energie"
+      },
+      "unassigned_storage_energy": {
+        "name": "Nicht zuordenbare PV-Speicherenergie"
+      },
+      "unvalued_direct_energy": {
+        "name": "Unbewertete direkte PV-Energie"
+      },
+      "unvalued_storage_energy": {
+        "name": "Unbewertete PV-Speicherenergie"
+      }
+    }
+  },
   "options": {
     "abort": {
       "already_configured": "Diese Netzgrenze ist bereits einer CO2-Saver-Anlage zugeordnet.",

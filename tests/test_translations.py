@@ -1,7 +1,7 @@
 # Copyright (C) 2026 CO2 Saver contributors
 # SPDX-License-Identifier: GPL-3.0-only
 
-"""Verify that Home Assistant can load every implemented flow label and error."""
+"""Verify that Home Assistant can load implemented flow and sensor translations."""
 
 from __future__ import annotations
 
@@ -190,3 +190,37 @@ async def test_consumer_translations(
     }.items():
         for choice in choices:
             assert selectors[f"component.{DOMAIN}.selector.{selector}.options.{choice}"]
+
+
+@pytest.mark.parametrize("language", ["en", "de"])
+async def test_sensor_translations(
+    hass: HomeAssistant, enable_custom_integrations: None, language: str
+) -> None:
+    """Localize every system and household value and each named consumer template."""
+    _ = enable_custom_integrations
+    translated = await async_get_translations(hass, language, "entity", {DOMAIN})
+    prefix = f"component.{DOMAIN}.entity.sensor"
+    for key in (
+        "net_savings",
+        "direct_net_savings",
+        "storage_net_savings",
+        "gross_avoided",
+        "pv_lifecycle",
+        "battery_lifecycle",
+        "direct_pv_energy",
+        "storage_pv_energy",
+        "unassigned_direct_energy",
+        "unassigned_storage_energy",
+        "unvalued_direct_energy",
+        "unvalued_storage_energy",
+    ):
+        assert translated[f"{prefix}.{key}.name"]
+    household = "Haushalt" if language == "de" else "Household"
+    for metric in ("net_savings", "direct_pv_energy", "storage_pv_energy"):
+        household_label = translated[f"{prefix}.household_{metric}.name"]
+        assert household in household_label
+        assert "{" not in household_label
+        template = translated[f"{prefix}.consumer_{metric}.name"]
+        assert "{consumer_name}" in template
+        assert "Wallbox" in template.format(consumer_name="Wallbox")
+    assert not any("[%key:" in value for value in translated.values())
