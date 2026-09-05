@@ -74,6 +74,7 @@ async def _flow(
         DOMAIN, data={"issue_id": storage_issue_id(entry.entry_id)}
     )
     assert result["type"] is FlowResultType.MENU
+    assert result["description_placeholders"] == {"name": entry.title}
     return manager, result
 
 

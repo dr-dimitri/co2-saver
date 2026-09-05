@@ -34,7 +34,7 @@ test = [
 include = ["custom_components*"]
 
 [tool.pytest.ini_options]
-addopts = "-ra --strict-config --strict-markers"
+addopts = "-ra --strict-config --strict-markers --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1"
 asyncio_mode = "auto"
 testpaths = ["tests"]
 

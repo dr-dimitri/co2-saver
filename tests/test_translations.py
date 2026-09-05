@@ -236,9 +236,15 @@ async def test_repairs_translations(
     prefix = f"component.{DOMAIN}.issues"
     for issue in ("storage_integrity", "sources_changed", "configuration_invalid"):
         assert translated[f"{prefix}.{issue}.title"]
-        description = translated[f"{prefix}.{issue}.description"]
+        description_key = (
+            "fix_flow.step.init.description"
+            if issue == "storage_integrity"
+            else "description"
+        )
+        description = translated[f"{prefix}.{issue}.{description_key}"]
         assert "{name}" in description
         assert "Solar" in description.format(name="Solar")
+    assert f"{prefix}.storage_integrity.description" not in translated
     flow = f"{prefix}.storage_integrity.fix_flow"
     for step in ("init", "confirm"):
         assert translated[f"{flow}.step.{step}.title"]

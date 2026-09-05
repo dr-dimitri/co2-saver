@@ -371,12 +371,13 @@ Transaktionspfad. Ergebnis-Sensoren übernehmen erst den verifizierten Zustand.
 Verbindliche Arbeitsregeln stehen in [`AGENTS.md`](AGENTS.md). Die Repo-Skills unter [`.agents/skills`](.agents/skills) enthalten die fachlichen CO₂-Bilanzierungsregeln und die Home-Assistant-Entwicklungskonventionen. Die [GitHub-Issues](https://github.com/dr-dimitri/co-saver/issues) bilden eine strikt abhängige Umsetzungskette; gearbeitet wird jeweils nur am nächsten nicht blockierten Issue.
 
 Unterstützte Mindestbasis ist Home Assistant 2026.9.0 mit Python 3.14.2.
-Die Entwicklungs- und CI-Umgebung ist auf Home Assistant 2026.9.0 festgelegt:
+Die Entwicklungs- und CI-Umgebung ist auf Home Assistant 2026.9.0 und Python
+3.14.7 festgelegt. `requirements-test.txt` bindet auch die indirekten
+Testabhängigkeiten an Versionen und Paket-Hashes:
 
 ```bash
 python3.14 -m venv .venv
-.venv/bin/python -m pip install --upgrade pip
-.venv/bin/python -m pip install --editable '.[test]'
+.venv/bin/python -m pip install --require-hashes -r requirements-test.txt
 ```
 
 Die vollständigen lokalen Prüfungen entsprechen der CI:
@@ -386,8 +387,13 @@ Die vollständigen lokalen Prüfungen entsprechen der CI:
 .venv/bin/ruff format --check .
 .venv/bin/ruff check .
 .venv/bin/mypy
-.venv/bin/pytest --cov=custom_components.co2saver --cov-report=term-missing
+.venv/bin/python -m pytest --cov=custom_components.co2saver --cov-report=term-missing
 ```
+
+Die [Prüfanleitung](docs/testing.md) beschreibt die Szenarioabdeckung, den
+offiziellen Hassfest-Validator und das Aktualisieren des Abhängigkeitsstands.
+Die [mehrzyklische Referenzrechnung](docs/accounting-reference.md) ist mit einem
+End-to-End-Test einschließlich Neustart verknüpft.
 
 ## Lizenz
 

@@ -308,7 +308,6 @@
       "title": "Configured energy or CO₂ source changed"
     },
     "storage_integrity": {
-      "description": "CO2 Saver cannot safely read or verify the stored accounting for {name}. Processing is stopped to preserve the existing data. Retry loading the existing generation first. A reset is available only with explicit confirmation after reviewing the data-loss and statistics consequences.",
       "fix_flow": {
         "abort": {
           "already_repaired": "The stored accounting is already available again.",
@@ -330,7 +329,7 @@
             "title": "Confirm accounting reset"
           },
           "init": {
-            "description": "Try loading the existing accounting again without resetting it. If the stored data cannot be recovered, review the separate reset option.",
+            "description": "CO2 Saver cannot safely read or verify the stored accounting for {name}. Processing is stopped to preserve the existing data. Retry loading the existing generation first. A reset is available only with explicit confirmation after reviewing the data-loss and statistics consequences.\n\nTry loading the existing accounting again without resetting it. If the stored data cannot be recovered, review the separate reset option.",
             "menu_options": {
               "confirm": "Review accounting reset",
               "retry": "Retry loading without a reset"

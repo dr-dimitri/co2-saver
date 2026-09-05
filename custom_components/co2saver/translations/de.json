@@ -308,7 +308,6 @@
       "title": "Konfigurierte Energie- oder CO₂-Quelle geändert"
     },
     "storage_integrity": {
-      "description": "CO2 Saver kann die gespeicherte Bilanz für {name} nicht sicher lesen oder verifizieren. Die Auswertung ist zum Schutz der vorhandenen Daten angehalten. Versuche zuerst, die bestehende Generation erneut zu laden. Ein Reset verlangt eine ausdrückliche Bestätigung nach Prüfung der Datenverlust- und Statistikfolgen.",
       "fix_flow": {
         "abort": {
           "already_repaired": "Die gespeicherte Bilanz ist bereits wieder verfügbar.",
@@ -330,7 +329,7 @@
             "title": "Zurücksetzen der Bilanz bestätigen"
           },
           "init": {
-            "description": "Versuche zunächst, die bestehende Bilanz ohne Reset erneut zu laden. Falls sie nicht wiederhergestellt werden kann, prüfe die getrennte Option zum Zurücksetzen.",
+            "description": "CO2 Saver kann die gespeicherte Bilanz für {name} nicht sicher lesen oder verifizieren. Die Auswertung ist zum Schutz der vorhandenen Daten angehalten. Versuche zuerst, die bestehende Generation erneut zu laden. Ein Reset verlangt eine ausdrückliche Bestätigung nach Prüfung der Datenverlust- und Statistikfolgen.\n\nVersuche zunächst, die bestehende Bilanz ohne Reset erneut zu laden. Falls sie nicht wiederhergestellt werden kann, prüfe die getrennte Option zum Zurücksetzen.",
             "menu_options": {
               "confirm": "Zurücksetzen der Bilanz prüfen",
               "retry": "Ohne Reset erneut laden"
