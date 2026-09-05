@@ -6,11 +6,11 @@ CO2 Saver wird eine Home-Assistant-Custom-Integration, die nachvollziehbar berec
 > Anlage mit Messtopologie, optionalem Speicher, Verbrauchern und CO₂-Faktoren
 > einrichten. Anlagen mit und ohne Speicher werten ihre Energiezähler aus und
 > speichern direkte PV-Nutzung, Speicherherkunft und CO₂-Bilanzen atomar.
-> Ergebnis-Entities folgen in Issue #11.
+> Kumulative Ergebnis-Sensoren veröffentlichen System- und Verbraucherwerte.
 
 ## Zielbild
 
-Die Integration soll Energieflüsse aus vorhandenen Home-Assistant-Entitäten auswerten und daraus Bruttovermeidung, herstellungsbedingte Emissionen und die Netto-CO₂-Ersparnis ableiten. Geplant sind:
+Die Integration wertet Energieflüsse aus vorhandenen Home-Assistant-Entitäten aus und leitet daraus Bruttovermeidung, herstellungsbedingte Emissionen und die Netto-CO₂-Ersparnis ab. Unterstützt werden:
 
 - PV-Erzeugung über Wechselrichter- oder Smartmeter-Sensoren,
 - Hausverbrauch sowie optionale weitere Verbraucher,
@@ -224,6 +224,66 @@ nachgeholt.
 
 Die Festlegungen zu Messwerttypen, Emissionsfaktoren, Speicherherkunft, Verlusten und Zeitbezug stehen im angenommenen [Mess- und CO₂-Bilanzierungsvertrag](docs/decisions/0001-accounting-and-input-contract.md). Abhängige Implementierung muss diesen Vertrag einhalten.
 
+## Ergebnis-Sensoren
+
+Jede Anlage erhält zwölf kumulative System-Sensoren. Die Emissionswerte werden
+in `kgCO₂e` und die Energiewerte in `kWh` veröffentlicht:
+
+| Sensor | Einheit | Bedeutung |
+| --- | --- | --- |
+| Netto-CO₂-Ersparnis | `kgCO₂e` | Summe aus direkter PV- und Speicher-Nettoersparnis. |
+| Netto-CO₂-Ersparnis direkte PV | `kgCO₂e` | Direkte Bruttovermeidung abzüglich der zugehörigen PV-Herstellungsbelastung. |
+| Netto-CO₂-Ersparnis Speicher | `kgCO₂e` | Vermeidung durch lokale PV-Speicherentladung abzüglich PV- und Speicher-Herstellungsbelastung. |
+| Brutto vermiedene CO₂-Emissionen | `kgCO₂e` | Vermiedene Netz-Emissionen aus direkter Nutzung und Speicherentladung, vor Herstellungsbelastungen. |
+| PV-Herstellungsbelastung | `kgCO₂e` | Einmal gebuchte PV-Belastung beider Nutzungspfade; beim Speicher einschließlich Ladeverlusten. |
+| Speicher-Herstellungsbelastung | `kgCO₂e` | Einmal gebuchte Herstellungsbelastung der anrechenbaren lokalen Speicherentladung. |
+| Direkt genutzte PV-Energie | `kWh` | Garantierte direkte PV-Nutzung am Standort. |
+| Lokal genutzte PV-Speicherenergie | `kWh` | Garantiert PV-stämmige Speicherentladung an lokale Lasten. |
+| Nicht zuordenbare direkte PV-Energie | `kWh` | Garantierte direkte Systemenergie ohne beweisbaren Einzelverbraucher. |
+| Nicht zuordenbare PV-Speicherenergie | `kWh` | Garantierte lokale Speicher-PV-Energie ohne beweisbaren Einzelverbraucher. |
+| Unbewertete direkte PV-Energie | `kWh` | Bereits physisch erfasste direkte PV-Energie ohne gültige aktuelle CO₂-Probe. |
+| Unbewertete PV-Speicherenergie | `kWh` | Bereits physisch erfasste lokale Speicher-PV-Energie ohne gültige aktuelle CO₂-Probe. |
+
+Haushalt und jeder zusätzliche Verbraucher erhalten außerdem je drei Sensoren:
+**Netto-CO₂-Ersparnis**, **direkt genutzte PV-Energie** und **lokal genutzte
+PV-Speicherenergie**, jeweils mit dem Verbrauchernamen. Die interne, ungerundete
+direkte beziehungsweise gespeicherte Energie aller Verbraucher plus dem
+jeweiligen Zuordnungsrest entspricht exakt dem Systemwert. Die
+verbraucherspezifischen Speicher-Nettoanteile enthalten unabhängige konservative
+Belastungsobergrenzen und werden deshalb nicht zum Systemergebnis addiert.
+Angezeigte Rundungen verändern die gespeicherte Bilanz nicht.
+
+Netto-Sensoren verwenden `state_class: total`, weil ein Intervall mit höherer
+Herstellungsbelastung als Bruttovermeidung ihre Werte verringern darf. Alle
+übrigen Sensoren verwenden `total_increasing`: Ihre Werte sind innerhalb einer
+Speichergeneration nicht negativ und monoton. Energie-Sensoren tragen die
+Device Class `energy`; Emissions-Sensoren verwenden keine
+CO₂-Konzentrationsklasse. Home Assistant übernimmt Anzeigepräzision und
+Langzeitstatistik; die zugrunde liegenden rationalen Rechenwerte bleiben exakt.
+
+Die Sensoren zeigen nur gemeinsam gespeicherte und zurückgelesene Ergebnisse.
+Vor einem gültigen Poll sowie bei ungültigen erforderlichen Quellen oder einem
+Speicherfehler sind sie `unavailable`, statt scheinbar gültige Nullen
+auszugeben. Ein nachweislich gültiger Nullfluss ist dagegen ein gültiger Wert.
+Die verfügbaren historischen Summen bleiben während einer Unterbrechung
+erhalten. Sensoren lesen selbst keine Quellen und führen keine Nachberechnung
+aus Home-Assistant-Historie durch.
+
+Entity IDs und Anzeigenamen können in Home Assistant angepasst werden;
+interne Unique IDs bleiben bei Reload, Neustart und Umbenennung stabil.
+Verbraucher behalten beim Umbenennen ihre Zeitreihe. Nach dem Entfernen werden
+ihre gespeicherten Werte nicht neu verteilt; ein später neu angelegter
+Verbraucher erhält auch bei gleichem Namen eine neue Identität.
+
+Die atomare Speichergeneration ist die einzige Quelle für die Wiederherstellung
+der Bilanz; Recorder-Werte werden nicht als Ersatz eingelesen. Ein Quellenreset
+oder fachlicher Segmentwechsel setzt Ergebniszähler nicht zurück. Ein
+ausdrücklich bestätigter Reparaturreset erzeugt gemäß dem Vertrag eine neue
+Generation unter denselben Entity-Identitäten. `total_increasing` beginnt dann
+einen neuen Zählerzyklus; Netto-Sensoren veröffentlichen den gespeicherten
+Reparaturzeitpunkt als `last_reset`, damit der Reset nicht als negative Ersparnis
+gezählt wird. Der Reparaturdialog folgt in Issue #12.
+
 ## Fachlicher Kern
 
 Das Domänenmodell unter `custom_components/co2saver/domain` verarbeitet bereits
@@ -246,7 +306,7 @@ frisch zurückgelesen. Erst nach bestätigtem Zurücklesen übernimmt die Laufze
 die neuen Summen. Ein fehlgeschlagener Commit oder abweichendes Read-back stoppt
 weitere Reads und Buchungen. Direkte Ersparnis, Speicherbewegungen, deren
 Emissionskomponenten und unbewertete Energie verwenden denselben
-Transaktionspfad. Ergebnis-Entities folgen in #11.
+Transaktionspfad. Ergebnis-Sensoren übernehmen erst den verifizierten Zustand.
 
 ## Entwicklung
 

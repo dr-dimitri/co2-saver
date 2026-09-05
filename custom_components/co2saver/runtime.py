@@ -9,14 +9,17 @@ import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from homeassistant.const import Platform
 from homeassistant.core import callback
 from homeassistant.exceptions import ConfigEntryError
 from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.helper_integration import async_handle_source_entity_changes
 
 from .bootstrap import PersistedRuntime, async_setup_storage
 from .config_factors import HomeAssistantGridIntensityReader
 from .config_plan import all_source_registry_ids, canonical_plan
+from .const import DOMAIN
 from .evaluation import EvaluationOutcome, EvaluationPlan, evaluate_observations
 from .flow_commit import async_release_visible_create
 from .measurement.ha import HomeAssistantEnergyReader, UtcMinuteRunner
@@ -36,6 +39,7 @@ if TYPE_CHECKING:
     type Co2SaverConfigEntry = ConfigEntry[EntryRuntime]
 
 _LOGGER = logging.getLogger(__name__)
+_PLATFORMS = (Platform.SENSOR,)
 
 
 @dataclass(slots=True)
@@ -46,6 +50,7 @@ class EntryRuntime(PersistedRuntime):
     available: bool = False
     status: str = "awaiting_observation"
     failed: bool = False
+    update_signal: str = ""
 
 
 def _start_runner(
@@ -62,6 +67,7 @@ def _start_runner(
         """Publish only the fully verified result of the captured physical poll."""
         if runtime.failed:
             return
+        previous = (runtime.state, runtime.available, runtime.status)
         sample, sample_error = grid_reader.read()
         outcome: EvaluationOutcome | None = None
 
@@ -84,6 +90,7 @@ def _start_runner(
             runtime.available = False
             runtime.status = "storage_error"
             runner.request_stop()
+            async_dispatcher_send(hass, runtime.update_signal)
             _LOGGER.exception(
                 "CO2 Saver stopped after an unverifiable state commit (%s)",
                 type(err).__name__,
@@ -106,6 +113,8 @@ def _start_runner(
                 else committed.measurement.phase.value
             )
         runtime.available = runtime.status == "ok"
+        if previous != (runtime.state, runtime.available, runtime.status):
+            async_dispatcher_send(hass, runtime.update_signal)
 
     runner = UtcMinuteRunner(hass, energy_reader, consume)
     runtime.runner = runner
@@ -147,7 +156,11 @@ async def async_setup_entry(
     except (KeyError, OSError, ValueError, VerifiedAtomicStoreError) as err:
         message = "CO2 Saver configuration or stored state is invalid"
         raise ConfigEntryError(message) from err
-    runtime = EntryRuntime(store=persisted.store, state=persisted.state)
+    runtime = EntryRuntime(
+        store=persisted.store,
+        state=persisted.state,
+        update_signal=f"{DOMAIN}_{entry.entry_id}_updated",
+    )
     entry.runtime_data = runtime
 
     async def source_removed() -> None:
@@ -165,16 +178,22 @@ async def async_setup_entry(
                 source_entity_removed=source_removed,
             )
         )
+    await hass.config_entries.async_forward_entry_setups(entry, _PLATFORMS)
     _start_runner(hass, runtime, entry.data)
     return True
 
 
 async def async_unload_entry(
-    hass: HomeAssistant,  # noqa: ARG001
+    hass: HomeAssistant,
     entry: Co2SaverConfigEntry,
 ) -> bool:
     """Unload a CO2 Saver config entry."""
-    if entry.runtime_data.runner is not None:
-        await entry.runtime_data.runner.async_stop()
-    entry.runtime_data.available = False
-    return True
+    runtime = entry.runtime_data
+    if runtime.runner is not None:
+        await runtime.runner.async_stop()
+    if await hass.config_entries.async_unload_platforms(entry, _PLATFORMS):
+        runtime.available = False
+        return True
+    if runtime.runner is not None and not runtime.failed:
+        _start_runner(hass, runtime, entry.data)
+    return False
