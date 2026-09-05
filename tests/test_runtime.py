@@ -484,20 +484,23 @@ async def test_reload_restores_exact_state_and_keeps_utc_anchor(
     assert entry.runtime_data.state.totals.direct_pv_kwh == 4
 
 
-async def test_battery_entry_has_no_poll_runner_or_reads(
+async def test_battery_entry_starts_one_runner_without_immediate_reads(
     hass: HomeAssistant, timers: list[_Timer], reads: _Reads
 ) -> None:
-    """#9 leaves storage entries initialized and quarantined until #10 activation."""
+    """#10 activates battery polls after bootstrap without inventing PV provenance."""
     plan, sources = _plan(hass, battery=True)
     entry = await _setup(hass, plan)
-    assert entry.runtime_data.runner is None
+    assert entry.runtime_data.runner is not None
     assert not entry.runtime_data.available
-    assert timers == []
+    assert len(timers) == 1
     _vector(hass, sources, _BASELINE)
     _grid(hass, sources, _BASELINE)
     await hass.async_block_till_done()
     assert reads.energy == reads.grid == 0
     assert entry.runtime_data.state.ledger is not None
+    assert entry.runtime_data.state.ledger.pv_lower.kwh == 0
+    await _tick(hass, timers, _BASELINE)
+    assert reads.energy == reads.grid == 1
     assert entry.runtime_data.state.ledger.pv_lower.kwh == 0
 
 

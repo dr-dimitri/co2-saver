@@ -17,7 +17,7 @@ from homeassistant.helpers.helper_integration import async_handle_source_entity_
 from .bootstrap import PersistedRuntime, async_setup_storage
 from .config_factors import HomeAssistantGridIntensityReader
 from .config_plan import all_source_registry_ids, canonical_plan
-from .evaluation import DirectEvaluationPlan, EvaluationOutcome, evaluate_observations
+from .evaluation import EvaluationOutcome, EvaluationPlan, evaluate_observations
 from .flow_commit import async_release_visible_create
 from .measurement.ha import HomeAssistantEnergyReader, UtcMinuteRunner
 from .measurement.models import MeasurementPhase
@@ -48,11 +48,11 @@ class EntryRuntime(PersistedRuntime):
     failed: bool = False
 
 
-def _start_direct_runner(
+def _start_runner(
     hass: HomeAssistant, runtime: EntryRuntime, data: Mapping[str, object]
 ) -> None:
     """Bind immutable configuration and one synchronous CO₂ read to each tick."""
-    plan = DirectEvaluationPlan.from_config(data)
+    plan = EvaluationPlan.from_config(data)
     energy_reader = HomeAssistantEnergyReader(hass, runtime.state.measurement.sources)
     grid_reader = HomeAssistantGridIntensityReader(hass, plan.grid_source_registry_id)
 
@@ -95,6 +95,8 @@ def _start_direct_runner(
         grid_error = sample_error or outcome.grid_error
         if outcome.measurement_fault is not None:
             runtime.status = outcome.measurement_fault.reason.value
+        elif outcome.storage_error is not None:
+            runtime.status = outcome.storage_error.value
         elif grid_error is not None:
             runtime.status = grid_error
         else:
@@ -163,10 +165,7 @@ async def async_setup_entry(
                 source_entity_removed=source_removed,
             )
         )
-    if entry.data["battery"] is None:
-        _start_direct_runner(hass, runtime, entry.data)
-    else:
-        runtime.status = "storage_evaluation_pending"
+    _start_runner(hass, runtime, entry.data)
     return True
 
 

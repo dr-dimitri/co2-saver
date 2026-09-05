@@ -4,9 +4,9 @@ CO2 Saver wird eine Home-Assistant-Custom-Integration, die nachvollziehbar berec
 
 > **Status:** Frühe Entwicklungsphase. Der vollständige Config Flow kann eine
 > Anlage mit Messtopologie, optionalem Speicher, Verbrauchern und CO₂-Faktoren
-> einrichten. Anlagen ohne Speicher werten ihre Energiezähler aus und speichern
-> direkte PV-Nutzung sowie CO₂-Bilanzen atomar. Einträge mit Speicher bleiben
-> bis Issue #10 ohne Messauswertung. Ergebnis-Entities folgen in Issue #11.
+> einrichten. Anlagen mit und ohne Speicher werten ihre Energiezähler aus und
+> speichern direkte PV-Nutzung, Speicherherkunft und CO₂-Bilanzen atomar.
+> Ergebnis-Entities folgen in Issue #11.
 
 ## Zielbild
 
@@ -23,14 +23,31 @@ Die Integration soll Energieflüsse aus vorhandenen Home-Assistant-Entitäten au
 
 Direkt genutzter PV-Strom kann beim Verbrauch bilanziert werden. In einen Speicher geladener PV-Strom erzeugt zu diesem Zeitpunkt noch keine Einsparung: Die zugehörige Vermeidung wird erst anerkannt, wenn nachweislich PV-stämmige Energie aus dem Speicher an einen erfassten Verbraucher abgegeben wird. Direkte Nutzung und spätere Speicherentladung dürfen niemals doppelt gezählt werden.
 
-Bei Anlagen ohne Speicher berechnet die laufende Auswertung ausschließlich die
-mathematisch garantierte direkte PV-Nutzung. Deren Energie multipliziert mit der
+Die laufende Auswertung berechnet die mathematisch garantierte direkte
+PV-Nutzung. Deren Energie multipliziert mit der
 gültigen Netz-CO₂-Intensität ergibt die Bruttovermeidung; der PV-Herstellungsfaktor
 wird auf dieselbe Energie genau einmal angewendet. Die Differenz ist die
 Netto-Ersparnis und darf negativ sein. Exportierte Energie erhält keine Gutschrift.
 Für Haushalt und zusätzliche Verbraucher gelten jeweils eigene garantierte
 Flussuntergrenzen. Ihre Energiewerte und der ausdrücklich nicht zuordenbare Rest
 ergeben zusammen exakt die systemweite direkte PV-Energie.
+
+Bei einem konfigurierten Speicher führt die Auswertung zusätzlich konservative
+Unter- und Obergrenzen für den Bestand und seine nachgewiesene PV-Herkunft.
+Ladung erhöht nur den mit dem bestätigten Wirkungsgrad bereinigten Bestand und
+hinterlegt dessen PV-Herstellungsbelastung; sie erzeugt keine Speicherersparnis.
+Erst eine garantiert PV-stämmige Entladung an einen lokalen Verbraucher wird mit
+der dann gültigen Netz-CO₂-Intensität bewertet. Dabei werden die zurückgestellte
+PV-Belastung einschließlich Ladeverlusten und der Speicher-Herstellungsfaktor
+jeweils einmal berücksichtigt. Netzenergie, unbekannte Herkunft, Verluste und
+Speicherexport erhalten keine Gutschrift. Direkte PV-Nutzung und
+Speicherentladung bleiben getrennt.
+
+Bei gemischter oder unklarer Herkunft wird keine gleichmäßige Durchmischung
+unterstellt. Die Verbraucherenergien und ihr Zuordnungsrest ergeben exakt die
+systemweite Speicher-PV-Energie. Die Speicher-Nettoergebnisse einzelner
+Verbraucher sind dagegen unabhängige konservative Sichten und dürfen nicht
+addiert werden; maßgeblich bleibt die Systembilanz.
 
 ## Aktueller Konfigurationsstand
 
@@ -117,8 +134,9 @@ vervollständigten Energiekandidaten. Ohne zulässige aktuelle Probe bleibt die
 gutschriftfähige Energie dauerhaft unbewertet, ohne Emissionsbuchung oder spätere
 Nachbewertung. Die Entscheidung ist in
 [ADR-0001 Version 2.2](docs/decisions/0001-accounting-and-input-contract.md#43-zeitliche-zuordnung)
-festgehalten. Die Auswertung ist derzeit ausschließlich für Anlagen ohne
-Speicher aktiv.
+festgehalten. Auch ohne gültige CO₂-Probe wird die physische Speicherherkunft
+fortgeschrieben und die zur unbewerteten Entladung gehörende PV-Belastung
+endgültig aus dem Herkunftskonto entfernt.
 
 Zwischenschritte bleiben unverbindliche Entwürfe. Erst der vollständig geprüfte
 Abschluss reserviert unter einem gemeinsamen Lock die Anlagenkennung und ein
@@ -126,10 +144,9 @@ neues Manifest. Nach überprüftem Zurücklesen wird der Config Entry erzeugt. S
 bindet das Manifest an diesen Entry und initialisiert oder übernimmt genau die
 dort bezeichnete Generation. Sie enthält die Messphase, den vollständigen
 Segmentfingerabdruck, Speicherherkunft, Summen und Diagnosen. Anschließend startet
-für eine Anlage ohne Speicher genau ein Messtimer am UTC-Minutenraster. Bei
-einem konfigurierten Speicher bleiben sowohl direkte als auch gespeicherte
-PV-Energie bis zur vollständigen Speicherbilanz aus #10 ohne Auswertung; die
-Konfiguration und der konservative Speicherzustand bleiben erhalten.
+für jede Anlage genau ein Messtimer am UTC-Minutenraster. Bei einem konfigurierten
+Speicher werden direkte Nutzung und Speicherherkunft aus demselben vollständigen
+Messvektor gemeinsam ausgewertet.
 
 Über **Konfigurieren** können Verbraucher und Faktoren bearbeitet werden;
 **Neu konfigurieren** führt zusätzlich durch Topologie und Speicher. Abbrechen
@@ -194,8 +211,16 @@ Fehlende oder ungültige Energiequellen, Zählerresets und Datenlücken erzeugen
 keine geschätzte Ersparnis. Nach einer Unterbrechung dient der erste neue gültige
 Gesamtvektor ausschließlich als Recovery-Baseline; erst das folgende vollständige
 Intervall kann wieder gebucht werden. Neustart und Reload stellen Messzustand
-und bisherige Summen gemeinsam wieder her. Unload entfernt zuerst den Timer und
-wartet einen bereits laufenden Commit ab. Verpasste Takte werden nicht nachgeholt.
+und bisherige Summen samt Speicherherkunft gemeinsam wieder her. Ein Speicher
+beginnt bei der Einrichtung, bei einem fachlichen Segmentwechsel und beim
+Eintritt in eine unterbrochene Energiezeitreihe konservativ in Quarantäne:
+Sein möglicher Bestand reicht von leer bis zur nutzbaren Kapazität, und keine
+Energie ist als PV nachgewiesen. Beobachtete Ladung und Entladung engen diese
+Schranken wieder ein. Auch gleichzeitige positive Ladung und Entladung oder ein
+Widerspruch zu den Bestandsschranken verwerfen das gesamte Intervall,
+einschließlich möglicher direkter Ersparnis. Unload entfernt zuerst den Timer
+und wartet einen bereits laufenden Commit ab. Verpasste Takte werden nicht
+nachgeholt.
 
 Die Festlegungen zu Messwerttypen, Emissionsfaktoren, Speicherherkunft, Verlusten und Zeitbezug stehen im angenommenen [Mess- und CO₂-Bilanzierungsvertrag](docs/decisions/0001-accounting-and-input-contract.md). Abhängige Implementierung muss diesen Vertrag einhalten.
 
@@ -219,9 +244,9 @@ Der vollständige UI-Flow nutzt diesen Vertrag zur aktuellen Validierung.
 Manifest, Eigentümerbindung und Generation werden atomar gespeichert und jeweils
 frisch zurückgelesen. Erst nach bestätigtem Zurücklesen übernimmt die Laufzeit
 die neuen Summen. Ein fehlgeschlagener Commit oder abweichendes Read-back stoppt
-weitere Reads und Buchungen. Die Auswertung ohne Speicher verwendet diesen
-gemeinsamen Transaktionspfad bereits; die Speicherbilanz folgt in #10 und die
-Ergebnis-Entities folgen in #11.
+weitere Reads und Buchungen. Direkte Ersparnis, Speicherbewegungen, deren
+Emissionskomponenten und unbewertete Energie verwenden denselben
+Transaktionspfad. Ergebnis-Entities folgen in #11.
 
 ## Entwicklung
 

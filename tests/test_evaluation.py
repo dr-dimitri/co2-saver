@@ -27,8 +27,8 @@ from custom_components.co2saver.domain import (
     StorageLedger,
 )
 from custom_components.co2saver.evaluation import (
-    DirectEvaluationPlan,
     EvaluationOutcome,
+    EvaluationPlan,
     evaluate_observations,
 )
 from custom_components.co2saver.measurement.models import (
@@ -102,7 +102,7 @@ def _config(
     }
 
 
-def _initial(plan: DirectEvaluationPlan) -> GenerationState:
+def _initial(plan: EvaluationPlan) -> GenerationState:
     """Create the same conservative initial generation as the verified bootstrap."""
     return GenerationState(
         storage_id=_STORE,
@@ -120,7 +120,7 @@ def _initial(plan: DirectEvaluationPlan) -> GenerationState:
 
 
 def _vector(
-    plan: DirectEvaluationPlan,
+    plan: EvaluationPlan,
     period: datetime,
     increments: dict[str, str] | None = None,
     *,
@@ -147,7 +147,7 @@ def _sample(time: datetime = _END, value: str = "400") -> GridIntensitySample:
 
 def _poll(
     state: GenerationState,
-    plan: DirectEvaluationPlan,
+    plan: EvaluationPlan,
     vector: tuple[EnergyObservation, ...],
     observed_at: datetime,
     sample: GridIntensitySample | None,
@@ -168,7 +168,7 @@ def _poll(
     return outcome
 
 
-def _baseline(plan: DirectEvaluationPlan) -> GenerationState:
+def _baseline(plan: EvaluationPlan) -> GenerationState:
     """Accept an initial vector without accounting its crossed installation interval."""
     result = _poll(_initial(plan), plan, _vector(plan, _START), _START, _sample(_START))
     assert not result.interval_processed
@@ -206,7 +206,7 @@ def test_evaluator_module_imports_without_home_assistant() -> None:
 def test_plan_and_outcome_are_immutable_and_detached() -> None:
     """Mutating a UI mapping cannot change already-selected accounting parameters."""
     config = _config()
-    plan = DirectEvaluationPlan.from_config(config)
+    plan = EvaluationPlan.from_config(config)
     config["factors"]["pv_factor"] = "123"
     config["consumption"]["consumers"][0]["share"] = "0.9"
     assert plan.pv_lifecycle.grams_per_kwh == 40
@@ -218,8 +218,8 @@ def test_plan_and_outcome_are_immutable_and_detached() -> None:
         outcome.interval_processed = True
 
 
-def test_battery_configurations_cannot_reach_the_direct_evaluator() -> None:
-    """Storage remains inactive until its separate accepted implementation issue."""
+def test_battery_configuration_builds_exact_immutable_storage_parameters() -> None:
+    """The accepted storage extension preserves explicitly configured factors."""
     config = _config()
     config["battery"] = {
         "battery_id": "6" * 32,
@@ -229,8 +229,13 @@ def test_battery_configurations_cannot_reach_the_direct_evaluator() -> None:
         "round_trip_efficiency": "0.9",
     }
     config["factors"]["battery_factor"] = "12"
-    with pytest.raises(ValueError, match="without storage"):
-        DirectEvaluationPlan.from_config(config)
+    plan = EvaluationPlan.from_config(config)
+    assert plan.storage is not None
+    assert plan.storage.capacity.kwh == 10
+    assert plan.storage.efficiency.value == Fraction(9, 10)
+    assert plan.storage.battery_lifecycle.grams_per_kwh == 12
+    with pytest.raises(FrozenInstanceError):
+        plan.storage.capacity = Energy.from_kwh("12")
 
 
 @pytest.mark.parametrize("topology", ["inverter", "smart_meter"])
@@ -239,7 +244,7 @@ def test_complete_reference_interval_preserves_system_and_consumer_bounds(
     topology: str, mode: str
 ) -> None:
     """Consumers receive independently proven PV, with exact unassigned remainder."""
-    plan = DirectEvaluationPlan.from_config(_config(topology, mode))
+    plan = EvaluationPlan.from_config(_config(topology, mode))
     before = _baseline(plan)
     outcome = _poll(
         before, plan, _vector(plan, _END, _reference_increments()), _END, _sample()
@@ -293,7 +298,7 @@ def test_supported_household_scenarios_never_credit_export_or_grid(  # noqa: PLR
     expected: str,
 ) -> None:
     """Only guaranteed self-consumed PV receives a once-only exact lifecycle burden."""
-    plan = DirectEvaluationPlan.from_config(_config(topology, additional=False))
+    plan = EvaluationPlan.from_config(_config(topology, additional=False))
     increments = {
         "pv_generation": pv,
         "local_load": load,
@@ -315,7 +320,7 @@ def test_negative_net_and_exact_factors_are_not_clamped_or_rounded() -> None:
     """All exact lifecycle digits survive a negative net result."""
     config = _config(additional=False)
     config["factors"]["pv_factor"] = "40.000000000000000000000000000000001"
-    plan = DirectEvaluationPlan.from_config(config)
+    plan = EvaluationPlan.from_config(config)
     outcome = _poll(
         _baseline(plan),
         plan,
@@ -342,7 +347,7 @@ def test_current_grid_sample_uses_physical_interval_end_with_inclusive_limits(
     sample_time: datetime, error: str | None
 ) -> None:
     """A sample before the poll may still be future relative to the actual interval."""
-    plan = DirectEvaluationPlan.from_config(_config())
+    plan = EvaluationPlan.from_config(_config())
     outcome = _poll(
         _baseline(plan),
         plan,
@@ -365,7 +370,7 @@ def test_missing_grid_never_revalues_energy_on_later_valid_duplicate_or_interval
     None
 ):
     """Physical energy advances while all CO₂ components of the gap remain zero."""
-    plan = DirectEvaluationPlan.from_config(_config())
+    plan = EvaluationPlan.from_config(_config())
     first_vector = _vector(plan, _END, _reference_increments())
     first = _poll(_baseline(plan), plan, first_vector, _END, None)
     assert first.grid_error == "source_unavailable"
@@ -402,7 +407,7 @@ def test_partial_candidate_uses_only_completion_poll_grid_sample_after_restore()
     None
 ):
     """A favorable factor read with the first partial vector is never cached."""
-    plan = DirectEvaluationPlan.from_config(_config())
+    plan = EvaluationPlan.from_config(_config())
     state = _baseline(plan)
     baseline_vector = _vector(plan, _START)
     first_vector = _vector(
@@ -444,7 +449,7 @@ def test_baseline_duplicate_and_pending_polls_report_grid_quality_without_commit
     None
 ):
     """Current availability updates do not create emissions or diagnostic history."""
-    plan = DirectEvaluationPlan.from_config(_config())
+    plan = EvaluationPlan.from_config(_config())
     baseline = _poll(_initial(plan), plan, _vector(plan, _START), _START, None)
     assert baseline.grid_error == "source_unavailable"
     assert all(count == 0 for _, count in baseline.state.diagnostics)
@@ -489,7 +494,7 @@ def test_energy_interruptions_count_once_and_recovery_never_books_gap(
     fault_kind: str,
 ) -> None:
     """Rejected energy cannot create results or repeatedly increment interruptions."""
-    plan = DirectEvaluationPlan.from_config(_config())
+    plan = EvaluationPlan.from_config(_config())
     state = _baseline(plan)
     period = _END if fault_kind != "long_gap" else _START + timedelta(seconds=901)
     vector: tuple[EnergyObservation, ...] = _vector(
@@ -553,7 +558,7 @@ def test_energy_interruptions_count_once_and_recovery_never_books_gap(
 
 def test_invalid_initial_observation_does_not_count_an_unstarted_interval() -> None:
     """A missing first baseline neither invents an interval nor a discard count."""
-    plan = DirectEvaluationPlan.from_config(_config())
+    plan = EvaluationPlan.from_config(_config())
     state = _initial(plan)
     initial = _vector(plan, _START)
     invalid = (
@@ -572,7 +577,7 @@ def test_smartmeter_optional_pv_check_is_not_a_second_truth_source() -> None:
     """A contradictory optional meter invalidates the authoritative site balance."""
     config = _config("smart_meter")
     config["sources"]["pv_plausibility"] = "1" * 32
-    plan = DirectEvaluationPlan.from_config(config)
+    plan = EvaluationPlan.from_config(config)
     valid = _poll(
         _baseline(plan),
         plan,
@@ -596,7 +601,7 @@ def test_smartmeter_optional_pv_check_is_not_a_second_truth_source() -> None:
 @pytest.mark.parametrize("mismatch", ["fingerprint", "sources", "consumer", "ledger"])
 def test_miswired_generation_is_rejected_before_advancing(mismatch: str) -> None:
     """A restored generation must belong to this exact segment and consumer plan."""
-    plan = DirectEvaluationPlan.from_config(_config())
+    plan = EvaluationPlan.from_config(_config())
     state = _baseline(plan)
     if mismatch == "fingerprint":
         state = replace(state, segment_fingerprint="0" * 64)
@@ -623,7 +628,7 @@ def test_miswired_generation_is_rejected_before_advancing(mismatch: str) -> None
 
 def test_assembler_requires_registry_and_role_identity_but_not_input_order() -> None:
     """Equal numerical deltas from a different physical source are inadmissible."""
-    plan = DirectEvaluationPlan.from_config(_config())
+    plan = EvaluationPlan.from_config(_config())
     amounts = _reference_increments()
     deltas = tuple(
         EnergyDelta(source, Energy.from_kwh(amounts[source.role]))
@@ -651,7 +656,7 @@ def test_malformed_current_grid_observation_never_values_energy(
     field: str, value: object, error: str
 ) -> None:
     """A defensive evaluator guard rejects a miswired or malformed adapter copy."""
-    plan = DirectEvaluationPlan.from_config(_config())
+    plan = EvaluationPlan.from_config(_config())
     raw: dict[str, object] = {
         "source_registry_id": _GRID,
         "value_g_co2e_per_kwh": Fraction(400),
@@ -676,7 +681,7 @@ def test_archived_consumer_and_storage_history_are_preserved_without_revaluation
     None
 ):
     """Battery-free future processing does not erase already recorded old segments."""
-    plan = DirectEvaluationPlan.from_config(_config())
+    plan = EvaluationPlan.from_config(_config())
     state = _baseline(plan)
     historical = CumulativeTotals(
         direct_pv_kwh=Fraction(1),

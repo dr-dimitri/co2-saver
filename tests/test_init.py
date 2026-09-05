@@ -79,7 +79,7 @@ async def _new_entry(hass: HomeAssistant, plan: dict[str, Any]) -> MockConfigEnt
 async def test_setup_reload_unload_preserves_verified_generation(
     hass: HomeAssistant, plan: dict[str, Any]
 ) -> None:
-    """Battery entries restore identically while their runner remains for #10."""
+    """Battery entries restore identically and each setup starts one runner."""
     registry = er.async_get(hass)
     plan["battery"] = {
         "battery_id": uuid4().hex,
@@ -105,7 +105,7 @@ async def test_setup_reload_unload_preserves_verified_generation(
             assert entry.runtime_data.state == initial
         assert await hass.config_entries.async_unload(entry.entry_id)
         assert entry.state is ConfigEntryState.NOT_LOADED
-        start.assert_not_called()
+        assert start.call_count == 4
 
 
 async def test_missing_configuration_is_permanent_setup_error(
