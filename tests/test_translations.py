@@ -5,6 +5,9 @@
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
+from string import Formatter
 from typing import TYPE_CHECKING
 
 import pytest
@@ -13,7 +16,47 @@ from homeassistant.helpers.translation import async_get_translations
 from custom_components.co2saver.const import DOMAIN
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from homeassistant.core import HomeAssistant
+
+
+def _catalog_texts(catalog: Mapping[str, object]) -> dict[str, str]:
+    """Keep every source label visible without Home Assistant's English fallback."""
+    texts: dict[str, str] = {}
+    for key, value in catalog.items():
+        if isinstance(value, dict):
+            texts.update(
+                {
+                    f"{key}.{child}": text
+                    for child, text in _catalog_texts(value).items()
+                }
+            )
+        else:
+            assert isinstance(value, str)
+            assert value.strip()
+            texts[key] = value
+    return texts
+
+
+@pytest.mark.parametrize("language", ["en", "de"])
+def test_translation_catalogs_are_complete_with_matching_placeholders(
+    language: str,
+) -> None:
+    """Missing native text or a renamed placeholder must not be hidden by fallback."""
+    directory = Path(__file__).parents[1] / "custom_components" / DOMAIN
+    source = _catalog_texts(json.loads((directory / "strings.json").read_text()))
+    translated = _catalog_texts(
+        json.loads((directory / "translations" / f"{language}.json").read_text())
+    )
+    assert translated.keys() == source.keys()
+    parser = Formatter()
+    for key, text in translated.items():
+        expected = {name for _, name, _, _ in parser.parse(source[key]) if name}
+        actual = {name for _, name, _, _ in parser.parse(text) if name}
+        assert actual == expected, key
+    if language == "en":
+        assert translated == source
 
 
 @pytest.mark.parametrize("language", ["en", "de"])
@@ -146,6 +189,7 @@ async def test_consumer_translations(
         assert translated[f"{prefix}.step.{step}.description"]
         for field in fields:
             assert translated[f"{prefix}.step.{step}.data.{field}"]
+            assert translated[f"{prefix}.step.{step}.data_description.{field}"]
     for error in (
         "invalid_consumption_mode",
         "load_confirmation_required",
