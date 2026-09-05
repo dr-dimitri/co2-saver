@@ -79,7 +79,18 @@ async def _new_entry(hass: HomeAssistant, plan: dict[str, Any]) -> MockConfigEnt
 async def test_setup_reload_unload_preserves_verified_generation(
     hass: HomeAssistant, plan: dict[str, Any]
 ) -> None:
-    """Restore identical state without running the still-out-of-scope timer."""
+    """Battery entries restore identically while their runner remains for #10."""
+    registry = er.async_get(hass)
+    plan["battery"] = {
+        "battery_id": uuid4().hex,
+        "charge_source": registry.async_get_or_create("sensor", "test", "charge").id,
+        "discharge_source": registry.async_get_or_create(
+            "sensor", "test", "discharge"
+        ).id,
+        "usable_capacity_kwh": "10",
+        "round_trip_efficiency": "0.9",
+    }
+    plan["factors"]["battery_factor"] = "20"
     entry = await _new_entry(hass, plan)
     with patch(
         "custom_components.co2saver.measurement.ha.UtcMinuteRunner.start"
