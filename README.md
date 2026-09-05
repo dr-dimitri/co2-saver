@@ -96,6 +96,19 @@ aktuelle Sensorqualität werden vor dem Speichern geprüft. Ein `ppm`-Sensor ist
 keine Netz-CO₂-Quelle. Die Netzprobe muss endlich, nicht negativ, verfügbar und
 über `last_reported` zeitlich gültig sein; eine Device Class wird nicht verlangt.
 
+Für die folgende Messauswertung ist festgelegt: Jeder reguläre UTC-Minutenpoll
+liest genau einmal die aktuelle Netz-CO₂-Probe. Sie darf nicht nach dem
+physischen Ende des dann vollständig verarbeiteten Energieintervalls liegen
+und dessen konfiguriertes Höchstalter nicht überschreiten; beide Grenzen gelten
+einschließlich Gleichheit. Ältere Proben werden nicht zwischengespeichert oder
+bei `unknown`, `unavailable` oder anderen ungültigen aktuellen Werten verwendet.
+Das gilt auch nach Neustart, Reload und Segmentwechsel sowie bei erst später
+vervollständigten Energiekandidaten. Ohne zulässige aktuelle Probe bleibt die
+gutschriftfähige Energie dauerhaft unbewertet, ohne Emissionsbuchung oder spätere
+Nachbewertung. Die Entscheidung ist in
+[ADR-0001 Version 2.2](docs/decisions/0001-accounting-and-input-contract.md#43-zeitliche-zuordnung)
+festgehalten; die Runner-Aktivierung folgt weiterhin in #9 und #10.
+
 Zwischenschritte bleiben unverbindliche Entwürfe. Erst der vollständig geprüfte
 Abschluss reserviert unter einem gemeinsamen Lock die Anlagenkennung und ein
 neues Manifest. Nach überprüftem Zurücklesen wird der Config Entry erzeugt. Setup
